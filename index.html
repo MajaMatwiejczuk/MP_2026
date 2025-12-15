@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Kalendarz przygotowań szachowych – Maja Matwiejczuk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -68,68 +67,82 @@ setInterval(updateCountdown,60*1000);
 updateCountdown();
 updateStarsCounter();
 
-// Gwiazdki
-function createStars(key,data,container){
-  const div = document.createElement('div'); div.className='stars';
-  div.style.display='flex'; div.style.alignItems='center'; div.style.gap='4px';
+// Gwiazdki i ikony w jednej linii
+function createStarsAndIcons(key,data,container){
+  const wrapper = document.createElement('div');
+  wrapper.style.display='flex'; wrapper.style.alignItems='center'; wrapper.style.gap='8px'; wrapper.style.flexWrap='wrap';
+
+  const starsDiv = document.createElement('div'); starsDiv.className='stars'; starsDiv.style.display='flex'; starsDiv.style.alignItems='center'; starsDiv.style.gap='2px';
   for(let i=1;i<=5;i++){
     const s=document.createElement('span'); s.innerHTML='☆'; s.style.color='black';
     if(data.stars>=i){ s.innerHTML='★'; s.style.color='gold'; }
     s.addEventListener('click',async()=>{
-      data.stars=i; await saveDay(key,data); renderMonth(); renderWeek(); renderDay(currentDate);
-    }); div.appendChild(s);
+      data.stars=i; await saveDay(key,data); updateStarsCounter();
+      renderMonth(); renderWeek(); renderDay(currentDate);
+    }); starsDiv.appendChild(s);
   }
-  container.appendChild(div);
+
+  const iconsDiv=document.createElement('div'); iconsDiv.style.display='flex'; iconsDiv.style.alignItems='center'; iconsDiv.style.gap='4px';
+  ['trening','turniej','analiza','regeneracja'].forEach(f=>{ if(data[f]){ const span=document.createElement('span'); span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f]; iconsDiv.appendChild(span); } });
+
+  wrapper.appendChild(starsDiv); wrapper.appendChild(iconsDiv);
+  container.appendChild(wrapper);
 }
 
-// Ikony z checkboxami (lewa strona)
-function createIcons(key,data,container){
+function createCheckboxIcons(key,data,container){
   const icons=[
     {label:'🎯',field:'trening'},
     {label:'🏆',field:'turniej'},
     {label:'🧠',field:'analiza'},
     {label:'😴',field:'regeneracja'}
   ];
-  const div=document.createElement('div'); div.className='icons-inline';
-  div.style.display='flex'; div.style.alignItems='center'; div.style.gap='4px';
+  const div=document.createElement('div'); div.style.display='flex'; div.style.alignItems='center'; div.style.gap='4px';
   icons.forEach(ic=>{
     const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=data[ic.field]||false; cb.style.marginRight='2px';
     cb.addEventListener('change',async(e)=>{ data[ic.field]=e.target.checked; await saveDay(key,data); renderMonth(); renderWeek(); });
     const span=document.createElement('span'); span.textContent=ic.label;
-    const wrapper=document.createElement('span'); wrapper.style.display='flex'; wrapper.style.alignItems='center';
-    wrapper.appendChild(cb); wrapper.appendChild(span);
+    const wrapper=document.createElement('span'); wrapper.style.display='flex'; wrapper.style.alignItems='center'; wrapper.appendChild(cb); wrapper.appendChild(span);
     div.appendChild(wrapper);
   });
   container.appendChild(div);
 }
 
-// Czy turniej
 function isTournament(date){ return tournamentDates.find(t=>date>=t.start && date<=t.end); }
 
-// Render dzień
+// Render dnia pełnego
 async function renderDay(date){
   calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='1fr';
   const key=date.toISOString().slice(0,10);
   const data=await loadDay(key);
   titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ${date.toLocaleDateString('pl-PL',{ weekday:'long', day:'numeric', month:'long'})}`;
 
-  const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='400px';
-  dayEl.innerHTML=`<textarea placeholder="Plan dnia">${data.text||''}</textarea>
+  const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='450px';
+  dayEl.innerHTML=`
+    <textarea placeholder="Plan dnia">${data.text||''}</textarea>
+    <textarea placeholder="Zadanie od trenera">${data.task||''}</textarea>
+    <label><input type='checkbox' ${data.taskDone?'checked':''}/> Czy wykonano</label>
     <input placeholder="Link Lichess" value="${data.link||''}" />
-    <small class='status'></small>`;
-
-  const textarea=dayEl.querySelector('textarea');
-  const input=dayEl.querySelector('input');
+    <small class='status'></small>
+  `;
+  const textarea=dayEl.querySelectorAll('textarea')[0];
+  const taskTextarea=dayEl.querySelectorAll('textarea')[1];
+  const input=dayEl.querySelector('input[type=text],input[type=url]');
+  const checkbox=dayEl.querySelector('input[type=checkbox]');
   const status=dayEl.querySelector('small.status');
-  const autosave=debounce(async()=>{status.textContent='⏳ zapisywanie…'; await saveDay(key,{text:textarea.value,link:input.value,stars:data.stars,...data}); status.textContent='✅ zapisano';});
-  textarea.addEventListener('input',autosave); input.addEventListener('input',autosave);
+  const autosave=debounce(async()=>{
+    status.textContent='⏳ zapisywanie…';
+    data.text=textarea.value; data.task=taskTextarea.value; data.taskDone=checkbox.checked; data.link=input.value;
+    await saveDay(key,data);
+    status.textContent='✅ zapisano';
+  });
+  textarea.addEventListener('input',autosave); taskTextarea.addEventListener('input',autosave); input.addEventListener('input',autosave); checkbox.addEventListener('change',autosave);
 
-  createStars(key,data,dayEl);
-  createIcons(key,data,dayEl);
+  createStarsAndIcons(key,data,dayEl);
+  createCheckboxIcons(key,data,dayEl);
   calendarEl.appendChild(dayEl);
 }
 
-// Render miesiąc
+// Render miesiąca
 async function renderMonth(){
   calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='repeat(7,1fr)';
   const year=currentDate.getFullYear(); const month=currentDate.getMonth();
@@ -141,28 +154,22 @@ async function renderMonth(){
   for(let d=1;d<=daysInMonth;d++){
     const date=new Date(year,month,d); const key=date.toISOString().slice(0,10);
     const data=await loadDay(key);
-    const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='150px';
-    const t=isTournament(date);
-    if(date>=mpStart && date<=mpEnd) dayEl.classList.add('mp');
-    if(t) dayEl.classList.add('tournament');
-
+    const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='180px';
+    const t=isTournament(date); if(date>=mpStart && date<=mpEnd) dayEl.classList.add('mp'); if(t) dayEl.classList.add('tournament');
     dayEl.innerHTML=`<header>${d}${t? ' 🏆 '+t.name : ''}</header>
       <textarea placeholder='Notatka'>${data.text||''}</textarea>`;
     const textarea=dayEl.querySelector('textarea');
-    const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); });
+    const autosave=debounce(async()=>{ data.text=textarea.value; await saveDay(key,data); updateStarsCounter(); });
     textarea.addEventListener('input',autosave);
     dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
 
-    createStars(key,data,dayEl);
-    const iconsDiv=document.createElement('div'); iconsDiv.className='icons-inline';
-    iconsDiv.style.display='flex'; iconsDiv.style.alignItems='center'; iconsDiv.style.gap='4px';
-    ['trening','turniej','analiza','regeneracja'].forEach(f=>{ if(data[f]){ const span=document.createElement('span'); span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f]; iconsDiv.appendChild(span); } });
-    dayEl.appendChild(iconsDiv);
+    createStarsAndIcons(key,data,dayEl);
     calendarEl.appendChild(dayEl);
   }
+  updateStarsCounter();
 }
 
-// Render tydzień (analogicznie)
+// Render tydzień
 async function renderWeek(){
   calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='repeat(7,1fr)';
   const dayOfWeek=(currentDate.getDay()||7)-1; const monday=new Date(currentDate); monday.setDate(currentDate.getDate()-dayOfWeek);
@@ -177,15 +184,11 @@ async function renderWeek(){
     dayEl.innerHTML=`<header>${date.toLocaleDateString('pl-PL',{ weekday:'short', day:'numeric'})}${t? ' 🏆 '+t.name : ''}</header>
       <textarea placeholder='Notatka'>${data.text||''}</textarea>`;
     const textarea=dayEl.querySelector('textarea');
-    const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); });
+    const autosave=debounce(async()=>{ data.text=textarea.value; await saveDay(key,data); updateStarsCounter(); });
     textarea.addEventListener('input',autosave);
     dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
 
-    createStars(key,data,dayEl);
-    const iconsDiv=document.createElement('div'); iconsDiv.className='icons-inline';
-    iconsDiv.style.display='flex'; iconsDiv.style.alignItems='center'; iconsDiv.style.gap='4px';
-    ['trening','turniej','analiza','regeneracja'].forEach(f=>{ if(data[f]){ const span=document.createElement('span'); span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f]; iconsDiv.appendChild(span); } });
-    dayEl.appendChild(iconsDiv);
+    createStarsAndIcons(key,data,dayEl);
     calendarEl.appendChild(dayEl);
   }
 }
@@ -215,13 +218,12 @@ header.top{padding:10px;display:flex;justify-content:space-between;align-items:c
 .day{background:#fff;border-radius:8px;padding:6px;box-shadow:0 0 4px rgba(0,0,0,.1);display:flex;flex-direction:column;}
 .day header{font-weight:bold;margin-bottom:4px;}
 textarea,input{width:100%;margin-top:4px;}
-textarea{min-height:80px;}
+textarea{min-height:50px;}
 .mp{border:2px solid gold;}
 .tournament{border:2px solid red;background:#fff0f0;}
 #countdown,#starsCounter{padding:5px;font-weight:bold;display:inline-block;margin-right:15px;}
 .stars span{cursor:pointer;font-size:20px;margin-right:2px;}
 .icons span{margin-right:6px;font-size:18px;display:inline-block;}
-.icons-inline{display:flex;flex-direction:row;gap:4px;margin-top:4px;align-items:center;}
 </style>
 </head>
 <body>
@@ -232,7 +234,6 @@ textarea{min-height:80px;}
 <button id='monthBtn' class='active'>Miesiąc</button>
 <button id='weekBtn'>Tydzień</button>
 <button id='dayBtn'>Dzień</button>
-<button id='tournamentsBtn'>Turnieje</button>
 <select id='monthSelect'>
 <option value='11'>Grudzień</option>
 <option value='0'>Styczeń</option>

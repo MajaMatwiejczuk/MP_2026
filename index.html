@@ -27,12 +27,14 @@ const monthBtn = document.getElementById('monthBtn');
 const weekBtn = document.getElementById('weekBtn');
 const dayBtn = document.getElementById('dayBtn');
 const homeBtn = document.getElementById('homeBtn');
+const countdownEl = document.getElementById('countdown');
 
 let currentDate = new Date();
 const mpStart = new Date('2026-02-28');
 const mpEnd = new Date('2026-03-08');
 const tournamentDates = [
-  { start: new Date('2025-12-28'), end: new Date('2025-12-29'), name: 'Końcówka Roku – Malbork' }
+  { start: new Date('2025-12-28'), end: new Date('2025-12-29'), name: 'Końcówka Roku – Malbork' },
+  { start: mpStart, end: mpEnd, name: 'Mistrzostwa Polski 2026' }
 ];
 
 function debounce(fn, delay = 800) {
@@ -67,8 +69,17 @@ dayBtn.onclick = () => setView('day');
 homeBtn.onclick = () => setView('month');
 
 function isTournament(date) {
-  return tournamentDates.some(t => date >= t.start && date <= t.end);
+  return tournamentDates.find(t => date >= t.start && date <= t.end);
 }
+
+function updateCountdown() {
+  const today = new Date();
+  const diff = Math.ceil((mpStart - today) / (1000*60*60*24));
+  countdownEl.textContent = diff > 0 ? `⏳ Dni do Mistrzostw Polski: ${diff}` : `🏆 Mistrzostwa trwają lub zakończone`;
+}
+
+setInterval(updateCountdown, 60*1000);
+updateCountdown();
 
 async function renderMonth() {
   calendarEl.innerHTML = '';
@@ -91,11 +102,13 @@ async function renderMonth() {
     const dayEl = document.createElement('div');
     dayEl.className = 'day';
     dayEl.style.height = '150px';
+
+    const tournament = isTournament(date);
     if (date >= mpStart && date <= mpEnd) dayEl.classList.add('mp');
-    if (isTournament(date)) dayEl.classList.add('tournament');
+    if (tournament) dayEl.classList.add('tournament');
 
     dayEl.innerHTML = `
-      <header>${d}</header>
+      <header>${d}${tournament ? ' 🏆 '+tournament.name : ''}</header>
       <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
       <input placeholder="Link Lichess" value="${data.link || ''}" />
       <small class="status"></small>
@@ -138,10 +151,11 @@ async function renderWeek() {
     const dayEl = document.createElement('div');
     dayEl.className = 'day';
     dayEl.style.height = '250px';
-    if (isTournament(date)) dayEl.classList.add('tournament');
+    const tournament = isTournament(date);
+    if (tournament) dayEl.classList.add('tournament');
 
     dayEl.innerHTML = `
-      <header>${date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' })}</header>
+      <header>${date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' })}${tournament ? ' 🏆 '+tournament.name : ''}</header>
       <textarea placeholder="Notatka dnia">${data.text || ''}</textarea>
       <small class="status"></small>
     `;
@@ -170,6 +184,9 @@ async function renderDay(date) {
   const dayEl = document.createElement('div');
   dayEl.className = 'day';
   dayEl.style.height = '350px';
+  const tournament = isTournament(date);
+  if (tournament) dayEl.classList.add('tournament');
+
   dayEl.innerHTML = `
     <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
     <input placeholder="Link Lichess" value="${data.link || ''}" />
@@ -207,6 +224,7 @@ textarea, input { width:100%; margin-top:4px; }
 .tournament { border:2px solid red; background:#fff0f0; }
 .active { background:gold; }
 #homeBtn { margin-left:10px; }
+#countdown { padding:5px; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -219,6 +237,7 @@ textarea, input { width:100%; margin-top:4px; }
     <button id="dayBtn">Dzień</button>
   </div>
 </header>
+<div id="countdown"></div>
 <main id="calendar" class="calendar"></main>
 </body>
 </html>

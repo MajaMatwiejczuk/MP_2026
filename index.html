@@ -52,26 +52,32 @@ async function loadDay(key){
   return s.exists()?s.data():{};
 }
 
-/* ========= LICZNIKI ========= */
+/* ========= LICZNIK GWIAZDEK ========= */
 async function updateStarsCounter(){
-  const today = new Date(); today.setHours(0,0,0,0);
   let earned = 0;
   const docs = await getDocs(collection(db,'calendar'));
 
   docs.forEach(d=>{
     const [y,m,dd] = d.id.split('-').map(Number);
     const date = new Date(y,m-1,dd);
-    if(date>=today && date<=mpEnd) earned += d.data().stars||0;
+
+    // LICZYMY OD POCZĄTKU KALENDARZA DO MP
+    if(date <= mpEnd){
+      earned += d.data().stars || 0;
+    }
   });
 
-  const daysLeft = Math.floor((mpEnd-today)/(1000*60*60*24))+1;
-  starsCounterEl.textContent = `⭐ Gwiazdki: ${earned}/${daysLeft*5}`;
+  const totalDays =
+    Math.floor((mpEnd - new Date(2025,11,1))/(1000*60*60*24)) + 1;
+
+  starsCounterEl.textContent = `⭐ Gwiazdki: ${earned}/${totalDays*5}`;
 }
+
+/* ========= COUNTDOWN ========= */
 function updateCountdown(){
   const diff = Math.ceil((mpStart-new Date())/(1000*60*60*24));
-  countdownEl.textContent = diff>0
-    ? `⏳ Dni do Mistrzostw Polski: ${diff}`
-    : `🏆 Mistrzostwa trwają lub zakończone`;
+  countdownEl.textContent =
+    diff>0 ? `⏳ Dni do Mistrzostw Polski: ${diff}` : `🏆 Mistrzostwa trwają lub zakończone`;
 }
 
 /* ========= GWIAZDKI + IKONY ========= */
@@ -87,7 +93,8 @@ function starsIcons(key,data,el){
       const v=data.stars===i?0:i;
       await saveDay(key,{stars:v});
       updateStarsCounter();
-      renderMonth();
+      if(currentView==='month') renderMonth();
+      if(currentView==='day') renderDay(currentDate);
     };
     stars.appendChild(s);
   }
@@ -119,10 +126,12 @@ async function renderDay(date){
     <input id="link" placeholder="Link Lichess" value="${data.link||''}">
     <label><input id="coachDone" type="checkbox" ${data.coachDone?'checked':''}> Informacje od trenera wykonane</label>
     <textarea id="coachInfo" placeholder="Informacje od trenera">${data.coachInfo||''}</textarea>
+
     <div class="checks">
-      ${['trening','turniej','analiza','regeneracja'].map(f=>`
-        <label><input type="checkbox" id="${f}" ${data[f]?'checked':''}> ${f}</label>
-      `).join('')}
+      <label><input type="checkbox" id="d_trening" ${data.trening?'checked':''}> 🎯 Trening</label>
+      <label><input type="checkbox" id="d_turniej" ${data.turniej?'checked':''}> 🏆 Turniej</label>
+      <label><input type="checkbox" id="d_analiza" ${data.analiza?'checked':''}> 🧠 Analiza</label>
+      <label><input type="checkbox" id="d_regeneracja" ${data.regeneracja?'checked':''}> 😴 Regeneracja</label>
     </div>
   `;
 
@@ -136,7 +145,7 @@ async function renderDay(date){
   el.querySelectorAll('textarea,input').forEach(i=>i.oninput=autosave);
 
   ['trening','turniej','analiza','regeneracja'].forEach(f=>{
-    el.querySelector('#'+f).onchange=e=>saveDay(key,{[f]:e.target.checked});
+    el.querySelector('#d_'+f).onchange=e=>saveDay(key,{[f]:e.target.checked});
   });
 
   starsIcons(key,data,el);

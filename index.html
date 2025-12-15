@@ -164,9 +164,10 @@ async function renderMonth(){
       el.appendChild(badge);
     }
 
-    renderStars(key,data,el);
-    el.ondblclick=()=>renderDay(date);
-    calendarEl.appendChild(el);
+renderChecklist(key, data, el);   // ← DODAJ TO
+renderStars(key, data, el);
+el.ondblclick = () => renderDay(date);
+calendarEl.appendChild(el);
   }
 }
 

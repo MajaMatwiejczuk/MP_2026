@@ -207,32 +207,56 @@ async function renderWeek(){
 // Render dnia pełnego
 async function renderDay(date){
   currentView='day';
-  calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='1fr';
+  calendarEl.innerHTML=''; 
+  calendarEl.style.gridTemplateColumns='1fr';
   const key=date.toISOString().slice(0,10);
   const data=await loadDay(key);
   titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ${date.toLocaleDateString('pl-PL',{ weekday:'long', day:'numeric', month:'long'})}`;
 
-  const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='400px';
-  dayEl.innerHTML=`<textarea placeholder="Plan dnia">${data.text||''}</textarea>
+  const dayEl=document.createElement('div'); 
+  dayEl.className='day'; 
+  dayEl.style.height='450px';
+  dayEl.innerHTML=`
+    <textarea placeholder="Plan dnia">${data.text||''}</textarea>
     <input placeholder="Link Lichess" value="${data.link||''}" />
-    <small class='status'></small>`;
+    <div style="margin-top:8px;">
+      <input type="checkbox" id="coachCheck" ${data.coachDone?'checked':''}>
+      <label for="coachCheck">Czy wykonano (Informacje od trenera)</label>
+      <textarea placeholder="Informacje od trenera" style="margin-top:4px;">${data.coachInfo||''}</textarea>
+    </div>
+    <small class='status'></small>
+  `;
 
   const textarea=dayEl.querySelector('textarea');
+  const coachTextarea = dayEl.querySelectorAll('textarea')[1];
   const input=dayEl.querySelector('input');
+  const coachCheckbox = dayEl.querySelector('#coachCheck');
   const status=dayEl.querySelector('small.status');
+
   const autosave=debounce(async()=>{
     status.textContent='⏳ zapisywanie…';
-    await saveDay(key,{text:textarea.value,link:input.value,stars:data.stars,...data});
+    await saveDay(key,{
+      text: textarea.value,
+      link: input.value,
+      stars: data.stars,
+      coachInfo: coachTextarea.value,
+      coachDone: coachCheckbox.checked,
+      ...data
+    });
     status.textContent='✅ zapisano';
     updateStarsCounter();
   });
-  textarea.addEventListener('input',autosave); 
-  input.addEventListener('input',autosave);
+
+  textarea.addEventListener('input', autosave);
+  input.addEventListener('input', autosave);
+  coachTextarea.addEventListener('input', autosave);
+  coachCheckbox.addEventListener('change', autosave);
 
   createStars(key,data,dayEl);
   createIcons(key,data,dayEl);
   calendarEl.appendChild(dayEl);
 }
+
 
 // Przycisk i eventy
 monthBtn.onclick=()=>{ renderMonth(); }; 

@@ -83,11 +83,24 @@ function starsIcons(key,data,el){
     const s=document.createElement("span");
     s.textContent=(data.stars||0)>=i?"★":"☆";
     s.style.color=(data.stars||0)>=i?"gold":"black";
-    s.onclick=async()=>{
-      const v=(data.stars||0)===i?0:i;
-      await saveDay(key,{stars:v});
-      updateStarsCounter();
-    };
+s.onclick = async () => {
+  const newValue = (data.stars || 0) === i ? 0 : i;
+
+  // 1️⃣ aktualizacja lokalna (UI reaguje natychmiast)
+  data.stars = newValue;
+
+  // 2️⃣ przerysowanie gwiazdek bez migania
+  row.querySelectorAll("span").forEach((star, idx) => {
+    star.textContent = idx < newValue ? "★" : "☆";
+    star.style.color = idx < newValue ? "gold" : "black";
+  });
+
+  // 3️⃣ zapis do Firestore (w tle)
+  await saveDay(key, { stars: newValue });
+
+  // 4️⃣ aktualizacja licznika
+  updateStarsCounter();
+};
     stars.appendChild(s);
   }
 

@@ -215,19 +215,25 @@ async function renderDay(date){
 
   const dayEl=document.createElement('div'); 
   dayEl.className='day'; 
-  dayEl.style.height='450px';
+  dayEl.style.height='500px';
+  dayEl.style.display='flex';
+  dayEl.style.flexDirection='column';
+  dayEl.style.gap='8px';
+
   dayEl.innerHTML=`
-    <textarea placeholder="Plan dnia">${data.text||''}</textarea>
+    <textarea placeholder="Plan dnia" style="min-height:100px;">${data.text||''}</textarea>
     <input placeholder="Link Lichess" value="${data.link||''}" />
-    <div style="margin-top:8px;">
-      <input type="checkbox" id="coachCheck" ${data.coachDone?'checked':''}>
-      <label for="coachCheck">Czy wykonano (Informacje od trenera)</label>
-      <textarea placeholder="Informacje od trenera" style="margin-top:4px;">${data.coachInfo||''}</textarea>
+    <div style="display:flex; flex-direction:column; gap:4px;">
+      <label>
+        <input type="checkbox" id="coachCheck" ${data.coachDone?'checked':''}>
+        Czy wykonano (Informacje od trenera)
+      </label>
+      <textarea placeholder="Informacje od trenera" style="min-height:80px;">${data.coachInfo||''}</textarea>
     </div>
     <small class='status'></small>
   `;
 
-  const textarea=dayEl.querySelector('textarea');
+  const mainTextarea = dayEl.querySelectorAll('textarea')[0];
   const coachTextarea = dayEl.querySelectorAll('textarea')[1];
   const input=dayEl.querySelector('input');
   const coachCheckbox = dayEl.querySelector('#coachCheck');
@@ -236,7 +242,7 @@ async function renderDay(date){
   const autosave=debounce(async()=>{
     status.textContent='⏳ zapisywanie…';
     await saveDay(key,{
-      text: textarea.value,
+      text: mainTextarea.value,
       link: input.value,
       stars: data.stars,
       coachInfo: coachTextarea.value,
@@ -247,7 +253,7 @@ async function renderDay(date){
     updateStarsCounter();
   });
 
-  textarea.addEventListener('input', autosave);
+  mainTextarea.addEventListener('input', autosave);
   input.addEventListener('input', autosave);
   coachTextarea.addEventListener('input', autosave);
   coachCheckbox.addEventListener('change', autosave);
@@ -256,6 +262,7 @@ async function renderDay(date){
   createIcons(key,data,dayEl);
   calendarEl.appendChild(dayEl);
 }
+
 
 
 // Przycisk i eventy

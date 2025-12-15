@@ -54,24 +54,6 @@ async function loadDay(key) {
   return snap.exists() ? snap.data() : {};
 }
 
-function setView(v) {
-  monthBtn.classList.toggle('active', v === 'month');
-  weekBtn.classList.toggle('active', v === 'week');
-  dayBtn.classList.toggle('active', v === 'day');
-  if (v === 'month') renderMonth();
-  if (v === 'week') renderWeek();
-  if (v === 'day') renderDay(currentDate);
-}
-
-monthBtn.onclick = () => setView('month');
-weekBtn.onclick = () => setView('week');
-dayBtn.onclick = () => setView('day');
-homeBtn.onclick = () => setView('month');
-
-function isTournament(date) {
-  return tournamentDates.find(t => date >= t.start && date <= t.end);
-}
-
 function updateCountdown() {
   const today = new Date();
   const diff = Math.ceil((mpStart - today) / (1000*60*60*24));
@@ -80,6 +62,10 @@ function updateCountdown() {
 
 setInterval(updateCountdown, 60*1000);
 updateCountdown();
+
+function isTournament(date) {
+  return tournamentDates.find(t => date >= t.start && date <= t.end);
+}
 
 function createStars(key, data, container) {
   const starContainer = document.createElement('div');
@@ -126,6 +112,75 @@ function createIcons(container) {
   container.appendChild(iconDiv);
 }
 
+async function renderMonth() {
+  calendarEl.innerHTML = '';
+  calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  titleEl.textContent = currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+
+  const firstDay = new Date(year, month, 1).getDay() || 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 1; i < firstDay; i++) calendarEl.appendChild(document.createElement('div'));
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const key = date.toISOString().slice(0,10);
+    const data = await loadDay(key);
+
+    const dayEl = document.createElement('div');
+    dayEl.className = 'day';
+    dayEl.style.height = '150px';
+
+    const tournament = isTournament(date);
+    if (date >= mpStart && date <= mpEnd) dayEl.classList.add('mp');
+    if (tournament) dayEl.classList.add('tournament');
+
+    dayEl.innerHTML = `<header>${d}${tournament ? ' 🏆 '+tournament.name : ''}</header>`;
+
+    dayEl.addEventListener('dblclick', () => {
+      currentDate = date;
+      renderDay(date);
+    });
+
+    calendarEl.appendChild(dayEl);
+  }
+}
+
+async function renderWeek() {
+  calendarEl.innerHTML = '';
+  calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+  const today = new Date();
+  const dayOfWeek = (today.getDay() || 7) - 1;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dayOfWeek);
+
+  titleEl.textContent = `Tydzień od ${monday.toLocaleDateString('pl-PL')}`;
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    const key = date.toISOString().slice(0,10);
+    const data = await loadDay(key);
+
+    const dayEl = document.createElement('div');
+    dayEl.className = 'day';
+    dayEl.style.height = '250px';
+    const tournament = isTournament(date);
+    if (tournament) dayEl.classList.add('tournament');
+
+    dayEl.innerHTML = `<header>${date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' })}${tournament ? ' 🏆 '+tournament.name : ''}</header>`;
+
+    dayEl.addEventListener('dblclick', () => {
+      currentDate = date;
+      renderDay(date);
+    });
+
+    calendarEl.appendChild(dayEl);
+  }
+}
+
 async function renderDay(date) {
   calendarEl.innerHTML = '';
   calendarEl.style.gridTemplateColumns = '1fr';
@@ -163,13 +218,14 @@ async function renderDay(date) {
   calendarEl.appendChild(dayEl);
 }
 
-window.addEventListener('DOMContentLoaded', () => setView('month'));
+window.addEventListener('DOMContentLoaded', () => renderMonth());
 </script>
 
 <style>
 body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; }
-header.top { background:#000; color:#fff; padding:10px; display:flex; justify-content:space-between; align-items:center; }
-.views button { margin:0 4px; }
+header.top { padding:10px; display:flex; justify-content:space-between; align-items:center; }
+.views button { margin:0 4px; background:none; border:none; color:#000; cursor:pointer; font-size:16px; }
+.views button.active { font-weight:bold; text-decoration:underline; }
 .calendar { display:grid; gap:8px; padding:10px; }
 .day { background:#fff; border-radius:8px; padding:6px; box-shadow:0 0 4px rgba(0,0,0,.1); }
 .day header { font-weight:bold; margin-bottom:4px; }
@@ -177,8 +233,6 @@ textarea, input { width:100%; margin-top:4px; }
 textarea { min-height:100px; }
 .mp { border:2px solid gold; }
 .tournament { border:2px solid red; background:#fff0f0; }
-.active { background:gold; }
-#homeBtn { margin-left:10px; }
 #countdown { padding:5px; font-weight:bold; }
 .stars span { cursor:pointer; font-size:20px; margin-right:2px; }
 .checklist label { display:block; margin-top:4px; }
@@ -189,7 +243,7 @@ textarea { min-height:100px; }
 <header class="top">
   <h1 id="title">Kalendarz przygotowań</h1>
   <div class="views">
-    <button id="homeBtn">🏠 Strona główna</button>
+    <button id="homeBtn">Strona główna</button>
     <button id="monthBtn" class="active">Miesiąc</button>
     <button id="weekBtn">Tydzień</button>
     <button id="dayBtn">Dzień</button>

@@ -36,7 +36,6 @@ const countdownEl = document.getElementById("countdown");
 const homeBtn = document.getElementById("homeBtn");
 const prevBtn = document.getElementById("prevMonthBtn");
 const nextBtn = document.getElementById("nextMonthBtn");
-const tournamentsBtn = document.getElementById("tournamentsBtn");
 
 /* ================= DATES ================= */
 let currentDate = new Date();
@@ -86,18 +85,17 @@ function applyDayColors(el, data, isTournament){
   }
 }
 
-/* ================= STARS ================= */
-function renderStars(key,data,el,isTournament){
+/* ================= STARS + ICONS ================= */
+function renderStarsAndIcons(key,data,el,isTournament){
   const row=document.createElement("div");
   row.className="row";
 
+  /* GWIAZDKI */
   const starsBox=document.createElement("div");
-
   for(let i=1;i<=MAX_STARS;i++){
     const s=document.createElement("span");
     s.textContent=(data.stars||0)>=i?"★":"☆";
     s.style.color=(data.stars||0)>=i?"gold":"black";
-
     s.onclick=async()=>{
       const v=(data.stars||0)===i?0:i;
       data.stars=v;
@@ -114,8 +112,43 @@ function renderStars(key,data,el,isTournament){
     starsBox.appendChild(s);
   }
 
-  row.appendChild(starsBox);
+  /* IKONKI CHECKLISTY */
+  const icons=document.createElement("div");
+  icons.className="icons";
+  const map={trening:"🎯",turniej:"🏆",analiza:"🧠",regeneracja:"😴"};
+  Object.keys(map).forEach(f=>{
+    if(data[f]) icons.textContent+=map[f];
+  });
+
+  row.append(starsBox,icons);
   el.appendChild(row);
+}
+
+/* ================= CHECKLISTA (WIDOK DNIA) ================= */
+function renderChecklist(key,data,el){
+  const box=document.createElement("div");
+  box.className="checks";
+
+  [
+    ["trening","🎯 Trening"],
+    ["turniej","🏆 Turniej"],
+    ["analiza","🧠 Analiza"],
+    ["regeneracja","😴 Regeneracja"]
+  ].forEach(([f,label])=>{
+    const l=document.createElement("label");
+    const c=document.createElement("input");
+    c.type="checkbox";
+    c.checked=!!data[f];
+    c.onchange=()=>{
+      data[f]=c.checked;
+      saveDay(key,{[f]:c.checked});
+      renderMonth();
+    };
+    l.append(c," ",label);
+    box.appendChild(l);
+  });
+
+  el.appendChild(box);
 }
 
 /* ================= COUNTERS ================= */
@@ -153,7 +186,6 @@ async function renderMonth(){
   const y=currentDate.getFullYear(), m=currentDate.getMonth();
   const first=(new Date(y,m,1).getDay()||7)-1;
   const days=new Date(y,m+1,0).getDate();
-
   for(let i=0;i<first;i++) calendarEl.appendChild(document.createElement("div"));
 
   for(let d=1;d<=days;d++){
@@ -172,7 +204,14 @@ async function renderMonth(){
     el.querySelector("textarea").oninput=
       debounce(()=>saveDay(key,{text:el.querySelector("textarea").value}));
 
-    renderStars(key,data,el,!!t);
+    if(t){
+      const badge=document.createElement("div");
+      badge.textContent="🏆 "+t.name;
+      badge.style.fontWeight="bold";
+      el.appendChild(badge);
+    }
+
+    renderStarsAndIcons(key,data,el,!!t);
     el.ondblclick=()=>renderDay(date);
     calendarEl.appendChild(el);
   }
@@ -197,10 +236,11 @@ async function renderDay(date){
     <textarea rows="6" placeholder="Plan dnia">${data.text||""}</textarea>
   `;
 
-  const ta=el.querySelector("textarea");
-  ta.oninput=debounce(()=>saveDay(key,{text:ta.value}));
+  el.querySelector("textarea").oninput=
+    debounce(()=>saveDay(key,{text:el.querySelector("textarea").value}));
 
-  renderStars(key,data,el,!!t);
+  renderChecklist(key,data,el);
+  renderStarsAndIcons(key,data,el,!!t);
   calendarEl.appendChild(el);
 }
 
@@ -222,15 +262,7 @@ body{margin:0;font-family:Arial;background:#f4f4f4}
 header{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#fff;border-bottom:2px solid #000}
 .menu button{margin-left:6px}
 .stats{display:flex;justify-content:space-between;padding:6px 10px;font-weight:bold}
-.legend{
-  display:flex;
-  gap:14px;
-  padding:6px 10px;
-  font-size:13px;
-}
-.legend span{display:flex;align-items:center;gap:6px}
-.box{width:14px;height:14px;border:2px solid #000;border-radius:3px}
-
+.legend{display:flex;gap:14px;padding:6px 10px;font-size:13px}
 .calendar{display:grid;gap:8px;padding:10px}
 .weekday{font-weight:bold;text-align:center}
 
@@ -245,6 +277,8 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 
 textarea{width:100%;resize:vertical}
 .row{display:flex;gap:6px;align-items:center}
+.icons{font-size:18px}
+.checks{display:flex;gap:10px;flex-wrap:wrap}
 span{cursor:pointer;font-size:20px}
 
 .tournament{background:#fff3cd}
@@ -270,13 +304,6 @@ span{cursor:pointer;font-size:20px}
 <div class="stats">
   <div id="starsCounter"></div>
   <div id="countdown"></div>
-</div>
-
-<div class="legend">
-  <span><div class="box" style="background:#fff3cd"></div> Turniej</span>
-  <span><div class="box" style="background:#b9f6ca"></div> Regeneracja</span>
-  <span><div class="box" style="background:#e3f2fd"></div> Są gwiazdki</span>
-  <span><div class="box" style="background:#ffb3b3"></div> Brak gwiazdek</span>
 </div>
 
 <main id="calendar" class="calendar"></main>

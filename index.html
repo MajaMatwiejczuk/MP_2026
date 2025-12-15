@@ -67,23 +67,21 @@ function createStars(key,data,container){
   container.appendChild(div);
 }
 
-// Checklist
-function createChecklist(key,data,container){
-  const items=['taktyka','debiuty','końcówki','analiza partii'];
-  const div=document.createElement('div'); div.className='checklist';
-  items.forEach(item=>{
-    const label=document.createElement('label');
-    label.innerHTML=`<input type='checkbox' ${data[item]?'checked':''}> ${item}`;
-    label.querySelector('input').addEventListener('change',async(e)=>{ data[item]=e.target.checked; await saveDay(key,data); });
-    div.appendChild(label);
-  }); container.appendChild(div);
-}
-
-// Ikony
-function createIcons(container){
-  const icons=['🎯 trening','🏆 turniej','🧠 analiza','😴 regeneracja'];
+// Ikony z checkboxami
+function createIcons(key,data,container){
+  const icons=[
+    {label:'🎯 trening',field:'trening'},
+    {label:'🏆 turniej',field:'turniej'},
+    {label:'🧠 analiza',field:'analiza'},
+    {label:'😴 regeneracja',field:'regeneracja'}
+  ];
   const div=document.createElement('div'); div.className='icons';
-  icons.forEach(ic=>{ const s=document.createElement('span'); s.textContent=ic; div.appendChild(s); });
+  icons.forEach(ic=>{
+    const span=document.createElement('span');
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=data[ic.field]||false; cb.style.marginRight='4px';
+    cb.addEventListener('change',async(e)=>{ data[ic.field]=e.target.checked; await saveDay(key,data); renderMonth(); });
+    span.appendChild(cb); span.appendChild(document.createTextNode(ic.label)); div.appendChild(span);
+  });
   container.appendChild(div);
 }
 
@@ -92,8 +90,7 @@ function isTournament(date){ return tournamentDates.find(t=>date>=t.start && dat
 
 // Render dzień pełny
 async function renderDay(date){
-  calendarEl.innerHTML='';
-  calendarEl.style.gridTemplateColumns='1fr';
+  calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='1fr';
   const key=date.toISOString().slice(0,10);
   const data=await loadDay(key);
   titleEl.textContent=date.toLocaleDateString('pl-PL',{ weekday:'long', day:'numeric', month:'long'});
@@ -110,8 +107,7 @@ async function renderDay(date){
   textarea.addEventListener('input',autosave); input.addEventListener('input',autosave);
 
   createStars(key,data,dayEl);
-  createChecklist(key,data,dayEl);
-  createIcons(dayEl);
+  createIcons(key,data,dayEl);
   calendarEl.appendChild(dayEl);
 }
 
@@ -137,7 +133,7 @@ async function renderMonth(){
     const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); });
     textarea.addEventListener('input',autosave);
     dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
-    createStars(key,data,dayEl); createChecklist(key,data,dayEl); createIcons(dayEl);
+    createStars(key,data,dayEl); createIcons(key,data,dayEl);
     calendarEl.appendChild(dayEl);
   }
 }
@@ -160,14 +156,13 @@ async function renderWeek(){
     const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); });
     textarea.addEventListener('input',autosave);
     dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
-    createStars(key,data,dayEl); createChecklist(key,data,dayEl); createIcons(dayEl);
+    createStars(key,data,dayEl); createIcons(key,data,dayEl);
     calendarEl.appendChild(dayEl);
   }
 }
 
 // Przycisk i eventy
 monthBtn.onclick=()=>{ renderMonth(); }; weekBtn.onclick=()=>{ renderWeek(); }; dayBtn.onclick=()=>{ renderDay(currentDate); }; homeBtn.onclick=()=>{ renderMonth(); };
-
 window.addEventListener('DOMContentLoaded',()=>renderMonth());
 </script>
 
@@ -185,8 +180,7 @@ textarea{min-height:80px;}
 .tournament{border:2px solid red;background:#fff0f0;}
 #countdown{padding:5px;font-weight:bold;}
 .stars span{cursor:pointer;font-size:20px;margin-right:2px;}
-.checklist label{display:block;margin-top:4px;}
-.icons span{margin-right:6px;font-size:18px;}
+.icons span{margin-right:6px;font-size:18px;display:block;margin-top:4px;}
 </style>
 </head>
 <body>

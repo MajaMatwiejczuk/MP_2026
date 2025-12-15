@@ -7,7 +7,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Firebase
 const firebaseConfig = {
@@ -29,6 +29,7 @@ const weekBtn = document.getElementById('weekBtn');
 const dayBtn = document.getElementById('dayBtn');
 const homeBtn = document.getElementById('homeBtn');
 const countdownEl = document.getElementById('countdown');
+const starsCounterEl = document.getElementById('starsCounter');
 
 // Data i turnieje
 let currentDate = new Date();
@@ -44,36 +45,51 @@ function debounce(fn, delay=500){ let t; return (...args)=>{ clearTimeout(t); t=
 async function saveDay(key, data){ await setDoc(doc(db,'calendar',key), data, {merge:true}); }
 async function loadDay(key){ const snap = await getDoc(doc(db,'calendar',key)); return snap.exists()?snap.data():{}; }
 
-// Countdown
+// Licznik gwiazdek
+async function updateStarsCounter(){
+  const today = new Date();
+  const allDocs = await getDocs(collection(db,'calendar'));
+  let earned = 0; let total = 0;
+  allDocs.forEach(doc=>{
+    const d = new Date(doc.id);
+    if(d>=today && d<=mpEnd){
+      earned += doc.data().stars || 0;
+      total += 5;
+    }
+  });
+  starsCounterEl.textContent = `⭐ Gwiazdki: ${earned}/${total}`;
+}
+
+// Countdown dni
 function updateCountdown(){
   const today = new Date();
   const diff = Math.ceil((mpStart - today)/(1000*60*60*24));
   countdownEl.textContent = diff>0?`⏳ Dni do Mistrzostw Polski: ${diff}`:`🏆 Mistrzostwa trwają lub zakończone`;
 }
 setInterval(updateCountdown,60*1000);
-updateCountdown();
+setInterval(updateStarsCounter,2000);
+updateCountdown(); updateStarsCounter();
 
 // Gwiazdki
 function createStars(key,data,container){
   const div = document.createElement('div'); div.className='stars';
   for(let i=1;i<=5;i++){
-    const s=document.createElement('span'); s.innerHTML='☆';
-    if(data.stars>=i)s.innerHTML='★';
+    const s=document.createElement('span'); s.innerHTML='☆'; s.style.color='black';
+    if(data.stars>=i)s.innerHTML='★'; s.style.color=(data.stars>=i)?'gold':'black';
     s.addEventListener('click',async()=>{
-      data.stars=i; await saveDay(key,data);
-      [...div.children].forEach((c,j)=>c.innerHTML=j<i?'★':'☆');
+      data.stars=i; await saveDay(key,data); renderMonth();
     }); div.appendChild(s);
   }
   container.appendChild(div);
 }
 
-// Ikony z checkboxami
+// Ikony z checkboxami (lewa strona)
 function createIcons(key,data,container){
   const icons=[
-    {label:'🎯 trening',field:'trening'},
-    {label:'🏆 turniej',field:'turniej'},
-    {label:'🧠 analiza',field:'analiza'},
-    {label:'😴 regeneracja',field:'regeneracja'}
+    {label:'🎯',field:'trening',title:'trening'},
+    {label:'🏆',field:'turniej',title:'turniej'},
+    {label:'🧠',field:'analiza',title:'analiza'},
+    {label:'😴',field:'regeneracja',title:'regeneracja'}
   ];
   const div=document.createElement('div'); div.className='icons';
   icons.forEach(ic=>{
@@ -93,7 +109,7 @@ async function renderDay(date){
   calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='1fr';
   const key=date.toISOString().slice(0,10);
   const data=await loadDay(key);
-  titleEl.textContent=date.toLocaleDateString('pl-PL',{ weekday:'long', day:'numeric', month:'long'});
+  titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ${date.toLocaleDateString('pl-PL',{ weekday:'long', day:'numeric', month:'long'})}`;
 
   const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='400px';
   dayEl.innerHTML=`<textarea placeholder="Plan dnia">${data.text||''}</textarea>
@@ -103,7 +119,7 @@ async function renderDay(date){
   const textarea=dayEl.querySelector('textarea');
   const input=dayEl.querySelector('input');
   const status=dayEl.querySelector('small.status');
-  const autosave=debounce(async()=>{status.textContent='⏳ zapisywanie…'; await saveDay(key,{text:textarea.value,link:input.value,stars:data.stars,...data}); status.textContent='✅ zapisano';});
+  const autosave=debounce(async()=>{status.textContent='⏳ zapisywanie…'; await saveDay(key,{text:textarea.value,link:input.value,stars:data.stars,...data}); status.textContent='✅ zapisano'; updateStarsCounter();});
   textarea.addEventListener('input',autosave); input.addEventListener('input',autosave);
 
   createStars(key,data,dayEl);
@@ -115,7 +131,7 @@ async function renderDay(date){
 async function renderMonth(){
   calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='repeat(7,1fr)';
   const year=currentDate.getFullYear(); const month=currentDate.getMonth();
-  titleEl.textContent=currentDate.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});
+  titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ${currentDate.toLocaleDateString('pl-PL',{month:'long',year:'numeric'})}`;
   const firstDay=new Date(year,month,1).getDay()||7;
   const daysInMonth=new Date(year,month+1,0).getDate();
   for(let i=1;i<firstDay;i++) calendarEl.appendChild(document.createElement('div'));
@@ -127,13 +143,25 @@ async function renderMonth(){
     const t=isTournament(date);
     if(date>=mpStart && date<=mpEnd) dayEl.classList.add('mp');
     if(t) dayEl.classList.add('tournament');
+
     dayEl.innerHTML=`<header>${d}${t? ' 🏆 '+t.name : ''}</header>
       <textarea placeholder='Notatka'>${data.text||''}</textarea>`;
     const textarea=dayEl.querySelector('textarea');
-    const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); });
+    const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); updateStarsCounter(); });
     textarea.addEventListener('input',autosave);
     dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
-    createStars(key,data,dayEl); createIcons(key,data,dayEl);
+
+    createStars(key,data,dayEl);
+    // Pokazujemy ikony tylko jeśli checkbox zaznaczony
+    const iconsDiv=document.createElement('div'); iconsDiv.className='icons';
+    ['trening','turniej','analiza','regeneracja'].forEach(f=>{
+      if(data[f]){
+        const span=document.createElement('span');
+        span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f];
+        iconsDiv.appendChild(span);
+      }
+    });
+    dayEl.appendChild(iconsDiv);
     calendarEl.appendChild(dayEl);
   }
 }
@@ -142,7 +170,7 @@ async function renderMonth(){
 async function renderWeek(){
   calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='repeat(7,1fr)';
   const dayOfWeek=(currentDate.getDay()||7)-1; const monday=new Date(currentDate); monday.setDate(currentDate.getDate()-dayOfWeek);
-  titleEl.textContent=`Tydzień od ${monday.toLocaleDateString('pl-PL')}`;
+  titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – Tydzień od ${monday.toLocaleDateString('pl-PL')}`;
 
   for(let i=0;i<7;i++){
     const date=new Date(monday); date.setDate(monday.getDate()+i);
@@ -153,10 +181,14 @@ async function renderWeek(){
     dayEl.innerHTML=`<header>${date.toLocaleDateString('pl-PL',{ weekday:'short', day:'numeric'})}${t? ' 🏆 '+t.name : ''}</header>
       <textarea placeholder='Notatka'>${data.text||''}</textarea>`;
     const textarea=dayEl.querySelector('textarea');
-    const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); });
+    const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); updateStarsCounter(); });
     textarea.addEventListener('input',autosave);
     dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
-    createStars(key,data,dayEl); createIcons(key,data,dayEl);
+
+    createStars(key,data,dayEl);
+    const iconsDiv=document.createElement('div'); iconsDiv.className='icons';
+    ['trening','turniej','analiza','regeneracja'].forEach(f=>{ if(data[f]){ const span=document.createElement('span'); span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f]; iconsDiv.appendChild(span); } });
+    dayEl.appendChild(iconsDiv);
     calendarEl.appendChild(dayEl);
   }
 }
@@ -178,9 +210,9 @@ textarea,input{width:100%;margin-top:4px;}
 textarea{min-height:80px;}
 .mp{border:2px solid gold;}
 .tournament{border:2px solid red;background:#fff0f0;}
-#countdown{padding:5px;font-weight:bold;}
+#countdown,#starsCounter{padding:5px;font-weight:bold;display:inline-block;margin-right:15px;}
 .stars span{cursor:pointer;font-size:20px;margin-right:2px;}
-.icons span{margin-right:6px;font-size:18px;display:block;margin-top:4px;}
+.icons span{margin-right:6px;font-size:18px;display:inline-block;}
 </style>
 </head>
 <body>
@@ -193,7 +225,7 @@ textarea{min-height:80px;}
 <button id='dayBtn'>Dzień</button>
 </div>
 </header>
-<div id='countdown'></div>
+<div id='countdown'></div><div id='starsCounter'></div>
 <main id='calendar' class='calendar'></main>
 </body>
 </html>

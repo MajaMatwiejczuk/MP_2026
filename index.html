@@ -11,7 +11,7 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ================= FIREBASE ================= */
+/* ===== FIREBASE ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyCnMfYLnkVcttfpjcfisGv1s-Nx-pL4jFk",
   authDomain: "maja2026-2ee26.firebaseapp.com",
@@ -23,7 +23,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ================= DOM ================= */
+/* ===== DOM ===== */
 const calendarEl = document.getElementById("calendar");
 const titleEl = document.getElementById("title");
 const homeBtn = document.getElementById("homeBtn");
@@ -32,18 +32,17 @@ const dayBtn = document.getElementById("dayBtn");
 const countdownEl = document.getElementById("countdown");
 const starsCounterEl = document.getElementById("starsCounter");
 
-/* ================= DATA ================= */
+/* ===== DATA ===== */
 let currentDate = new Date();
 let currentView = "month";
 
-const calendarStart = new Date(2025,11,1); // 1 grudnia 2025
+const calendarStart = new Date(2025,11,1);
 const mpStart = new Date(2026,1,28);
 const mpEnd   = new Date(2026,2,8);
 
-/* ================= HELPERS ================= */
+/* ===== HELPERS ===== */
 function debounce(fn, delay=400){
-  let t;
-  return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),delay); };
+  let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),delay); };
 }
 async function saveDay(key, obj){
   await setDoc(doc(db,"calendar",key), obj, {merge:true});
@@ -57,11 +56,10 @@ async function loadDaySafe(key){
   }
 }
 
-/* ================= LICZNIKI ================= */
+/* ===== COUNTERS ===== */
 async function updateStarsCounter(){
   let earned = 0;
   let snap;
-
   try {
     snap = await getDocs(collection(db,"calendar"));
   } catch {
@@ -89,35 +87,33 @@ function updateCountdown(){
     diff>0 ? `⏳ Dni do Mistrzostw Polski: ${diff}` : `🏆 Mistrzostwa trwają lub zakończone`;
 }
 
-/* ================= GWIAZDKI + IKONY ================= */
+/* ===== STARS + ICONS ===== */
 function starsIcons(key,data,el){
   const row=document.createElement("div"); row.className="row";
 
   const stars=document.createElement("div");
   for(let i=1;i<=5;i++){
     const s=document.createElement("span");
-    s.textContent = (data.stars||0) >= i ? "★" : "☆";
-    s.style.color = (data.stars||0) >= i ? "gold" : "black";
-    s.onclick = async ()=>{
-      const v = (data.stars||0) === i ? 0 : i;
+    s.textContent=(data.stars||0)>=i?"★":"☆";
+    s.style.color=(data.stars||0)>=i?"gold":"black";
+    s.onclick=async()=>{
+      const v=(data.stars||0)===i?0:i;
       await saveDay(key,{stars:v});
       updateStarsCounter();
-      currentView==="month" ? renderMonth() : renderDay(currentDate);
+      currentView==="month"?renderMonth():renderDay(currentDate);
     };
     stars.appendChild(s);
   }
 
   const icons=document.createElement("div");
   const map={trening:"🎯",turniej:"🏆",analiza:"🧠",regeneracja:"😴"};
-  Object.keys(map).forEach(f=>{
-    if(data[f]) icons.textContent += map[f];
-  });
+  Object.keys(map).forEach(f=>{ if(data[f]) icons.textContent+=map[f]; });
 
   row.append(stars,icons);
   el.appendChild(row);
 }
 
-/* ================= WIDOK DNIA ================= */
+/* ===== DAY VIEW ===== */
 async function renderDay(date){
   currentView="day";
   calendarEl.innerHTML="";
@@ -151,7 +147,6 @@ async function renderDay(date){
     coachInfo:el.querySelector("#coachInfo").value,
     coachDone:el.querySelector("#coachDone").checked
   }));
-
   el.querySelectorAll("textarea,input").forEach(i=>i.oninput=autosave);
 
   ["trening","turniej","analiza","regeneracja"].forEach(f=>{
@@ -162,7 +157,7 @@ async function renderDay(date){
   calendarEl.appendChild(el);
 }
 
-/* ================= MIESIĄC ================= */
+/* ===== MONTH VIEW ===== */
 async function renderMonth(){
   currentView="month";
   calendarEl.innerHTML="";
@@ -184,14 +179,21 @@ async function renderMonth(){
 
     const el=document.createElement("div");
     el.className="day";
-    el.innerHTML=`<b>${d}</b>`;
     el.ondblclick=()=>renderDay(date);
+
+    const preview=(data.text||"").split("\n")[0].slice(0,60);
+
+    el.innerHTML=`
+      <b>${d}</b>
+      ${preview?`<div class="note-preview">${preview}…</div>`:""}
+    `;
+
     starsIcons(key,data,el);
     calendarEl.appendChild(el);
   }
 }
 
-/* ================= START ================= */
+/* ===== START ===== */
 homeBtn.onclick = renderMonth;
 monthBtn.onclick = renderMonth;
 dayBtn.onclick   = ()=>renderDay(currentDate);
@@ -216,6 +218,7 @@ body{font-family:Arial;background:#f4f4f4;margin:0}
 textarea{min-height:80px}
 .row{display:flex;gap:10px;align-items:center}
 .checks{display:flex;gap:10px;flex-wrap:wrap}
+.note-preview{font-size:12px;color:#444;line-height:1.2em;max-height:2.4em;overflow:hidden}
 span{cursor:pointer;font-size:20px}
 </style>
 </head>

@@ -8,7 +8,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Firebase
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCnMfYLnkVcttfpjcfisGv1s-Nx-pL4jFk",
   authDomain: "maja2026-2ee26.firebaseapp.com",
@@ -17,6 +17,7 @@ const firebaseConfig = {
   messagingSenderId: "365178420968",
   appId: "1:365178420968:web:2081cdd7ae556d6eb6135d"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -27,7 +28,6 @@ const monthBtn = document.getElementById('monthBtn');
 const weekBtn = document.getElementById('weekBtn');
 const dayBtn = document.getElementById('dayBtn');
 const homeBtn = document.getElementById('homeBtn');
-const tournamentsBtn = document.getElementById('tournamentsBtn');
 const monthSelect = document.getElementById('monthSelect');
 const countdownEl = document.getElementById('countdown');
 const starsCounterEl = document.getElementById('starsCounter');
@@ -35,14 +35,13 @@ const starsCounterEl = document.getElementById('starsCounter');
 let currentDate = new Date();
 const mpStart = new Date('2026-02-28');
 const mpEnd = new Date('2026-03-08');
-let tournamentDates = [];
+let currentView='month';
 
 function debounce(fn, delay=500){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), delay); }; }
 
 async function saveDay(key, data){ await setDoc(doc(db,'calendar',key), data, {merge:true}); updateStarsCounter(); }
 async function loadDay(key){ const snap = await getDoc(doc(db,'calendar',key)); return snap.exists()?snap.data():{}; }
 
-// Licznik gwiazdek
 async function updateStarsCounter(){
   const today = new Date();
   const allDocs = await getDocs(collection(db,'calendar'));
@@ -57,7 +56,6 @@ async function updateStarsCounter(){
   starsCounterEl.textContent = `⭐ Gwiazdki: ${earned}/${total}`;
 }
 
-// Countdown dni
 function updateCountdown(){
   const today = new Date();
   const diff = Math.ceil((mpStart - today)/(1000*60*60*24));
@@ -67,19 +65,17 @@ setInterval(updateCountdown,60*1000);
 updateCountdown();
 updateStarsCounter();
 
-// Gwiazdki i ikony w jednej linii
 function createStarsAndIcons(key,data,container){
   const wrapper = document.createElement('div');
-  wrapper.style.display='flex'; wrapper.style.alignItems='center'; wrapper.style.justifyContent='space-between'; wrapper.style.flexWrap='wrap';
+  wrapper.style.display='flex'; wrapper.style.alignItems='center'; wrapper.style.justifyContent='space-between';
 
-  // Gwiazdki
-  const starsDiv = document.createElement('div'); starsDiv.className='stars'; starsDiv.style.display='flex'; starsDiv.style.alignItems='center'; starsDiv.style.gap='2px';
+  const starsDiv = document.createElement('div');
+  starsDiv.style.display='flex'; starsDiv.style.gap='2px';
   for(let i=1;i<=5;i++){
-    const s=document.createElement('span'); s.innerHTML='☆'; s.style.color='black';
+    const s=document.createElement('span'); s.innerHTML='☆'; s.style.cursor='pointer'; s.style.color='black';
     if(data.stars>=i){ s.innerHTML='★'; s.style.color='gold'; }
     s.addEventListener('click',async(e)=>{
-      e.stopPropagation();
-      data.stars=i; await saveDay(key,data); updateStarsCounter();
+      e.stopPropagation(); data.stars=i; await saveDay(key,data); updateStarsCounter();
       if(currentView==='month') renderMonth();
       if(currentView==='week') renderWeek();
       if(currentView==='day' && currentDate.toISOString().slice(0,10)===key) renderDay(currentDate);
@@ -87,8 +83,8 @@ function createStarsAndIcons(key,data,container){
     starsDiv.appendChild(s);
   }
 
-  // Ikony
-  const iconsDiv=document.createElement('div'); iconsDiv.style.display='flex'; iconsDiv.style.alignItems='center'; iconsDiv.style.gap='4px';
+  const iconsDiv = document.createElement('div');
+  iconsDiv.style.display='flex'; iconsDiv.style.gap='4px';
   ['trening','turniej','analiza','regeneracja'].forEach(f=>{ if(data[f]){ const span=document.createElement('span'); span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f]; iconsDiv.appendChild(span); } });
 
   wrapper.appendChild(starsDiv);
@@ -96,35 +92,12 @@ function createStarsAndIcons(key,data,container){
   container.appendChild(wrapper);
 }
 
-function createCheckboxIcons(key,data,container){
-  const icons=[
-    {label:'🎯',field:'trening'},
-    {label:'🏆',field:'turniej'},
-    {label:'🧠',field:'analiza'},
-    {label:'😴',field:'regeneracja'}
-  ];
-  const div=document.createElement('div'); div.style.display='flex'; div.style.alignItems='center'; div.style.gap='4px';
-  icons.forEach(ic=>{
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=data[ic.field]||false; cb.style.marginRight='2px';
-    cb.addEventListener('change',async(e)=>{ data[ic.field]=e.target.checked; await saveDay(key,data); renderMonth(); renderWeek(); });
-    const span=document.createElement('span'); span.textContent=ic.label;
-    const wrapper=document.createElement('span'); wrapper.style.display='flex'; wrapper.style.alignItems='center'; wrapper.appendChild(cb); wrapper.appendChild(span);
-    div.appendChild(wrapper);
-  });
-  container.appendChild(div);
-}
-
-function isTournament(date){ return tournamentDates.find(t=>date>=t.start && date<=t.end); }
-
-let currentView='month';
-
-// Render dnia
 async function renderDay(date){
   currentView='day';
   calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='1fr';
-  const key=date.toISOString().slice(0,10);
-  const data=await loadDay(key);
-  titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ${date.toLocaleDateString('pl-PL',{ weekday:'long', day:'numeric', month:'long'})}`;
+  const key = date.toISOString().slice(0,10);
+  const data = await loadDay(key);
+  titleEl.textContent = `Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ${date.toLocaleDateString('pl-PL',{ weekday:'long', day:'numeric', month:'long'})}`;
 
   const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='500px';
   dayEl.innerHTML=`
@@ -134,32 +107,33 @@ async function renderDay(date){
     <input placeholder="Link Lichess" value="${data.link||''}" />
     <small class='status'></small>
   `;
-  const textarea=dayEl.querySelectorAll('textarea')[0];
-  const taskTextarea=dayEl.querySelectorAll('textarea')[1];
-  const input=dayEl.querySelector('input[type=text],input[type=url]');
-  const checkbox=dayEl.querySelector('input[type=checkbox]');
-  const status=dayEl.querySelector('small.status');
-  const autosave=debounce(async()=>{
+
+  const textarea = dayEl.querySelectorAll('textarea')[0];
+  const taskTextarea = dayEl.querySelectorAll('textarea')[1];
+  const input = dayEl.querySelector('input[type=text],input[type=url]');
+  const checkbox = dayEl.querySelector('input[type=checkbox]');
+  const status = dayEl.querySelector('small.status');
+  const autosave = debounce(async()=>{
     status.textContent='⏳ zapisywanie…';
-    data.text=textarea.value; data.task=taskTextarea.value; data.taskDone=checkbox.checked; data.link=input.value;
+    data.text = textarea.value; data.task = taskTextarea.value; data.taskDone = checkbox.checked; data.link = input.value;
     await saveDay(key,data);
     status.textContent='✅ zapisano';
   });
-  textarea.addEventListener('input',autosave); taskTextarea.addEventListener('input',autosave); input.addEventListener('input',autosave); checkbox.addEventListener('change',autosave);
+  textarea.addEventListener('input',autosave);
+  taskTextarea.addEventListener('input',autosave);
+  input.addEventListener('input',autosave);
+  checkbox.addEventListener('change',autosave);
 
   createStarsAndIcons(key,data,dayEl);
-  createCheckboxIcons(key,data,dayEl);
   calendarEl.appendChild(dayEl);
 }
 
-// Render miesiąca i tygodnia będzie analogicznie z gwiazdkami i ikonami w linii oraz Notatką kompaktową
-// Funkcje renderMonth(), renderWeek() analogiczne do wcześniejszego kodu z poprawionymi gwiazdkami i zapisem do bazy
-
-monthSelect.addEventListener('change',()=>{ currentDate.setMonth(parseInt(monthSelect.value)); renderMonth(); });
-monthBtn.onclick=()=>{ renderMonth(); };
-weekBtn.onclick=()=>{ renderWeek(); };
+// Funkcje renderMonth() i renderWeek() należy przywrócić dokładnie z działającej wersji poprzedniej
+monthBtn.onclick=()=>{ currentView='month'; renderMonth(); };
+weekBtn.onclick=()=>{ currentView='week'; renderWeek(); };
 dayBtn.onclick=()=>{ renderDay(currentDate); };
-homeBtn.onclick=()=>{ renderMonth(); };
+homeBtn.onclick=()=>{ currentView='month'; renderMonth(); };
+monthSelect.addEventListener('change',()=>{ currentDate.setMonth(parseInt(monthSelect.value)); renderMonth(); });
 window.addEventListener('DOMContentLoaded',()=>renderMonth());
 </script>
 
@@ -189,7 +163,6 @@ textarea{min-height:50px;}
 <button id='monthBtn' class='active'>Miesiąc</button>
 <button id='weekBtn'>Tydzień</button>
 <button id='dayBtn'>Dzień</button>
-<button id='tournamentsBtn'>Turnieje</button>
 <select id='monthSelect'>
 <option value='11'>Grudzień</option>
 <option value='0'>Styczeń</option>

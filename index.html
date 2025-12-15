@@ -186,10 +186,19 @@ homeBtn.onclick = () => renderMonth();
 monthBtn.onclick = () => renderMonth();
 dayBtn.onclick   = () => renderDay(currentDate);
 
-updateCountdown();
-updateStarsCounter();
-renderMonth();
+async function startApp() {
+  try {
+    updateCountdown();
+    await updateStarsCounter();
+    await renderMonth();
+  } catch (e) {
+    console.error("Błąd startu aplikacji:", e);
+    calendarEl.innerHTML = "<p>Błąd ładowania kalendarza</p>";
+  }
+}
 
+
+startApp();
 
 </script>
 

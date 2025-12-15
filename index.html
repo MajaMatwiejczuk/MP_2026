@@ -7,7 +7,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Firebase
 const firebaseConfig = {
@@ -28,21 +28,18 @@ const monthBtn = document.getElementById('monthBtn');
 const weekBtn = document.getElementById('weekBtn');
 const dayBtn = document.getElementById('dayBtn');
 const homeBtn = document.getElementById('homeBtn');
+const tournamentsBtn = document.getElementById('tournamentsBtn');
 const countdownEl = document.getElementById('countdown');
 const starsCounterEl = document.getElementById('starsCounter');
 
-// Data i turnieje
 let currentDate = new Date();
 const mpStart = new Date('2026-02-28');
 const mpEnd = new Date('2026-03-08');
-let tournamentDates = [
-  { start: new Date('2025-12-28'), end: new Date('2025-12-29'), name: 'Końcówka Roku – Malbork' },
-  { start: mpStart, end: mpEnd, name: 'Mistrzostwa Polski 2026' }
-];
+let tournamentDates = [];
 
 function debounce(fn, delay=500){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), delay); }; }
 
-async function saveDay(key, data){ await setDoc(doc(db,'calendar',key), data, {merge:true}); }
+async function saveDay(key, data){ await setDoc(doc(db,'calendar',key), data, {merge:true}); updateStarsCounter(); }
 async function loadDay(key){ const snap = await getDoc(doc(db,'calendar',key)); return snap.exists()?snap.data():{}; }
 
 // Licznik gwiazdek
@@ -67,15 +64,15 @@ function updateCountdown(){
   countdownEl.textContent = diff>0?`⏳ Dni do Mistrzostw Polski: ${diff}`:`🏆 Mistrzostwa trwają lub zakończone`;
 }
 setInterval(updateCountdown,60*1000);
-setInterval(updateStarsCounter,2000);
-updateCountdown(); updateStarsCounter();
+updateCountdown();
+updateStarsCounter();
 
 // Gwiazdki
 function createStars(key,data,container){
   const div = document.createElement('div'); div.className='stars';
   for(let i=1;i<=5;i++){
     const s=document.createElement('span'); s.innerHTML='☆'; s.style.color='black';
-    if(data.stars>=i)s.innerHTML='★'; s.style.color=(data.stars>=i)?'gold':'black';
+    if(data.stars>=i){ s.innerHTML='★'; s.style.color='gold'; }
     s.addEventListener('click',async()=>{
       data.stars=i; await saveDay(key,data); renderMonth();
     }); div.appendChild(s);
@@ -86,10 +83,10 @@ function createStars(key,data,container){
 // Ikony z checkboxami (lewa strona)
 function createIcons(key,data,container){
   const icons=[
-    {label:'🎯',field:'trening',title:'trening'},
-    {label:'🏆',field:'turniej',title:'turniej'},
-    {label:'🧠',field:'analiza',title:'analiza'},
-    {label:'😴',field:'regeneracja',title:'regeneracja'}
+    {label:'🎯',field:'trening'},
+    {label:'🏆',field:'turniej'},
+    {label:'🧠',field:'analiza'},
+    {label:'😴',field:'regeneracja'}
   ];
   const div=document.createElement('div'); div.className='icons';
   icons.forEach(ic=>{
@@ -119,7 +116,7 @@ async function renderDay(date){
   const textarea=dayEl.querySelector('textarea');
   const input=dayEl.querySelector('input');
   const status=dayEl.querySelector('small.status');
-  const autosave=debounce(async()=>{status.textContent='⏳ zapisywanie…'; await saveDay(key,{text:textarea.value,link:input.value,stars:data.stars,...data}); status.textContent='✅ zapisano'; updateStarsCounter();});
+  const autosave=debounce(async()=>{status.textContent='⏳ zapisywanie…'; await saveDay(key,{text:textarea.value,link:input.value,stars:data.stars,...data}); status.textContent='✅ zapisano';});
   textarea.addEventListener('input',autosave); input.addEventListener('input',autosave);
 
   createStars(key,data,dayEl);
@@ -152,21 +149,15 @@ async function renderMonth(){
     dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
 
     createStars(key,data,dayEl);
-    // Pokazujemy ikony tylko jeśli checkbox zaznaczony
-    const iconsDiv=document.createElement('div'); iconsDiv.className='icons';
-    ['trening','turniej','analiza','regeneracja'].forEach(f=>{
-      if(data[f]){
-        const span=document.createElement('span');
-        span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f];
-        iconsDiv.appendChild(span);
-      }
-    });
+    // Pokazujemy ikony tylko jeśli checkbox zaznaczony, obok gwiazdek
+    const iconsDiv=document.createElement('div'); iconsDiv.className='icons-inline';
+    ['trening','turniej','analiza','regeneracja'].forEach(f=>{ if(data[f]){ const span=document.createElement('span'); span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f]; iconsDiv.appendChild(span); } });
     dayEl.appendChild(iconsDiv);
     calendarEl.appendChild(dayEl);
   }
 }
 
-// Render tydzień
+// Render tydzień (analogicznie)
 async function renderWeek(){
   calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='repeat(7,1fr)';
   const dayOfWeek=(currentDate.getDay()||7)-1; const monday=new Date(currentDate); monday.setDate(currentDate.getDate()-dayOfWeek);
@@ -186,15 +177,52 @@ async function renderWeek(){
     dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
 
     createStars(key,data,dayEl);
-    const iconsDiv=document.createElement('div'); iconsDiv.className='icons';
+    const iconsDiv=document.createElement('div'); iconsDiv.className='icons-inline';
     ['trening','turniej','analiza','regeneracja'].forEach(f=>{ if(data[f]){ const span=document.createElement('span'); span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f]; iconsDiv.appendChild(span); } });
     dayEl.appendChild(iconsDiv);
     calendarEl.appendChild(dayEl);
   }
 }
 
+// Menu Turnieje
+async function renderTournaments(){
+  calendarEl.innerHTML=''; titleEl.textContent='Menu Turnieje';
+  const container=document.createElement('div');
+  container.innerHTML=`<h3>Dodaj Turniej</h3>
+    <input type='text' placeholder='Nazwa' id='tName'>
+    <input type='date' id='tStart'>
+    <input type='date' id='tEnd'>
+    <button id='addT'>Dodaj</button>
+    <h3>Lista Turniejów</h3>
+    <ul id='tList'></ul>`;
+  calendarEl.appendChild(container);
+
+  async function refreshList(){
+    const listEl=document.getElementById('tList'); listEl.innerHTML='';
+    tournamentDates.forEach((t,i)=>{
+      const li=document.createElement('li'); li.textContent=`${t.name}: ${t.start.toLocaleDateString()} - ${t.end.toLocaleDateString()}`;
+      const del=document.createElement('button'); del.textContent='Usuń'; del.addEventListener('click',()=>{
+        tournamentDates.splice(i,1); renderMonth(); renderWeek();
+      }); li.appendChild(del); listEl.appendChild(li);
+    });
+  }
+  document.getElementById('addT').addEventListener('click',()=>{
+    const name=document.getElementById('tName').value;
+    const start=new Date(document.getElementById('tStart').value);
+    const end=new Date(document.getElementById('tEnd').value);
+    if(name && start && end){
+      tournamentDates.push({name,start,end}); renderMonth(); renderWeek(); refreshList();
+    }
+  });
+  refreshList();
+}
+
 // Przycisk i eventy
-monthBtn.onclick=()=>{ renderMonth(); }; weekBtn.onclick=()=>{ renderWeek(); }; dayBtn.onclick=()=>{ renderDay(currentDate); }; homeBtn.onclick=()=>{ renderMonth(); };
+monthBtn.onclick=()=>{ renderMonth(); };
+weekBtn.onclick=()=>{ renderWeek(); };
+dayBtn.onclick=()=>{ renderDay(currentDate); };
+homeBtn.onclick=()=>{ renderMonth(); };
+tournamentsBtn.onclick=()=>{ renderTournaments(); };
 window.addEventListener('DOMContentLoaded',()=>renderMonth());
 </script>
 
@@ -204,7 +232,7 @@ header.top{padding:10px;display:flex;justify-content:space-between;align-items:c
 .views button{margin:0 6px;background:none;border:none;color:#000;cursor:pointer;font-size:16px;}
 .views button.active{font-weight:bold;text-decoration:underline;}
 .calendar{display:grid;gap:8px;padding:10px;}
-.day{background:#fff;border-radius:8px;padding:6px;box-shadow:0 0 4px rgba(0,0,0,.1);}
+.day{background:#fff;border-radius:8px;padding:6px;box-shadow:0 0 4px rgba(0,0,0,.1);display:flex;flex-direction:column;}
 .day header{font-weight:bold;margin-bottom:4px;}
 textarea,input{width:100%;margin-top:4px;}
 textarea{min-height:80px;}
@@ -213,6 +241,7 @@ textarea{min-height:80px;}
 #countdown,#starsCounter{padding:5px;font-weight:bold;display:inline-block;margin-right:15px;}
 .stars span{cursor:pointer;font-size:20px;margin-right:2px;}
 .icons span{margin-right:6px;font-size:18px;display:inline-block;}
+.icons-inline{display:flex;flex-direction:row;gap:4px;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -223,6 +252,7 @@ textarea{min-height:80px;}
 <button id='monthBtn' class='active'>Miesiąc</button>
 <button id='weekBtn'>Tydzień</button>
 <button id='dayBtn'>Dzień</button>
+<button id='tournamentsBtn'>Turnieje</button>
 </div>
 </header>
 <div id='countdown'></div><div id='starsCounter'></div>

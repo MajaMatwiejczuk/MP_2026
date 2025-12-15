@@ -24,18 +24,19 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /* ================= DOM ================= */
-const calendarEl = document.getElementById('calendar');
-const titleEl = document.getElementById('title');
-const homeBtn = document.getElementById('homeBtn');
-const monthBtn = document.getElementById('monthBtn');
-const dayBtn = document.getElementById('dayBtn');
-const countdownEl = document.getElementById('countdown');
-const starsCounterEl = document.getElementById('starsCounter');
+const calendarEl = document.getElementById("calendar");
+const titleEl = document.getElementById("title");
+const homeBtn = document.getElementById("homeBtn");
+const monthBtn = document.getElementById("monthBtn");
+const dayBtn = document.getElementById("dayBtn");
+const countdownEl = document.getElementById("countdown");
+const starsCounterEl = document.getElementById("starsCounter");
 
 /* ================= DATA ================= */
 let currentDate = new Date();
-let currentView = 'month';
+let currentView = "month";
 
+const calendarStart = new Date(2025,11,1); // 1 grudnia 2025
 const mpStart = new Date(2026,1,28);
 const mpEnd   = new Date(2026,2,8);
 
@@ -45,27 +46,37 @@ function debounce(fn, delay=400){
   return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),delay); };
 }
 async function saveDay(key, obj){
-  await setDoc(doc(db,'calendar',key), obj, {merge:true});
+  await setDoc(doc(db,"calendar",key), obj, {merge:true});
 }
-async function loadDay(key){
-  const s = await getDoc(doc(db,'calendar',key));
-  return s.exists()?s.data():{};
+async function loadDaySafe(key){
+  try {
+    const s = await getDoc(doc(db,"calendar",key));
+    return s.exists() ? s.data() : {};
+  } catch {
+    return {};
+  }
 }
 
 /* ================= LICZNIKI ================= */
 async function updateStarsCounter(){
   let earned = 0;
-  const docs = await getDocs(collection(db,'calendar'));
+  let snap;
 
-  docs.forEach(d=>{
-    const [y,m,dd] = d.id.split('-').map(Number);
+  try {
+    snap = await getDocs(collection(db,"calendar"));
+  } catch {
+    starsCounterEl.textContent = "⭐ Gwiazdki: 0/0";
+    return;
+  }
+
+  snap.forEach(d=>{
+    const [y,m,dd] = d.id.split("-").map(Number);
     const date = new Date(y,m-1,dd);
     if(date <= mpEnd){
       earned += d.data().stars || 0;
     }
   });
 
-  const calendarStart = new Date(2025,11,1);
   const totalDays =
     Math.floor((mpEnd - calendarStart)/(1000*60*60*24)) + 1;
 
@@ -80,27 +91,26 @@ function updateCountdown(){
 
 /* ================= GWIAZDKI + IKONY ================= */
 function starsIcons(key,data,el){
-  const row=document.createElement('div'); row.className='row';
+  const row=document.createElement("div"); row.className="row";
 
-  const stars=document.createElement('div');
+  const stars=document.createElement("div");
   for(let i=1;i<=5;i++){
-    const s=document.createElement('span');
-    s.textContent=data.stars>=i?'★':'☆';
-    s.style.color=data.stars>=i?'gold':'black';
-    s.onclick=async()=>{
-      const v=data.stars===i?0:i;
+    const s=document.createElement("span");
+    s.textContent = (data.stars||0) >= i ? "★" : "☆";
+    s.style.color = (data.stars||0) >= i ? "gold" : "black";
+    s.onclick = async ()=>{
+      const v = (data.stars||0) === i ? 0 : i;
       await saveDay(key,{stars:v});
       updateStarsCounter();
-      if(currentView==='month') renderMonth();
-      if(currentView==='day') renderDay(currentDate);
+      currentView==="month" ? renderMonth() : renderDay(currentDate);
     };
     stars.appendChild(s);
   }
 
-  const icons=document.createElement('div');
-  const map={trening:'🎯',turniej:'🏆',analiza:'🧠',regeneracja:'😴'};
+  const icons=document.createElement("div");
+  const map={trening:"🎯",turniej:"🏆",analiza:"🧠",regeneracja:"😴"};
   Object.keys(map).forEach(f=>{
-    if(data[f]) icons.textContent+=map[f];
+    if(data[f]) icons.textContent += map[f];
   });
 
   row.append(stars,icons);
@@ -109,45 +119,43 @@ function starsIcons(key,data,el){
 
 /* ================= WIDOK DNIA ================= */
 async function renderDay(date){
-  currentView='day';
-  calendarEl.innerHTML='';
-  calendarEl.style.gridTemplateColumns='1fr';
+  currentView="day";
+  calendarEl.innerHTML="";
+  calendarEl.style.gridTemplateColumns="1fr";
 
   const key=date.toISOString().slice(0,10);
-  const data=await loadDay(key);
+  const data=await loadDaySafe(key);
 
-  titleEl.textContent=
-    `Maja Matwiejczuk – ${date.toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long'})}`;
+  titleEl.textContent =
+    `Maja Matwiejczuk – ${date.toLocaleDateString("pl-PL",{weekday:"long",day:"numeric",month:"long"})}`;
 
-  const el=document.createElement('div'); el.className='day';
+  const el=document.createElement("div");
+  el.className="day";
   el.innerHTML=`
-    <textarea id="plan" placeholder="Plan dnia">${data.text||''}</textarea>
-    <input id="link" placeholder="Link Lichess" value="${data.link||''}">
-    <label class="coach">
-      <input id="coachDone" type="checkbox" ${data.coachDone?'checked':''}>
-      Informacje od trenera wykonane
-    </label>
-    <textarea id="coachInfo" placeholder="Informacje od trenera">${data.coachInfo||''}</textarea>
+    <textarea id="plan" placeholder="Plan dnia">${data.text||""}</textarea>
+    <input id="link" placeholder="Link Lichess" value="${data.link||""}">
+    <label><input id="coachDone" type="checkbox" ${data.coachDone?"checked":""}> Informacje od trenera wykonane</label>
+    <textarea id="coachInfo" placeholder="Informacje od trenera">${data.coachInfo||""}</textarea>
 
     <div class="checks">
-      <label><input type="checkbox" id="d_trening" ${data.trening?'checked':''}> 🎯 Trening</label>
-      <label><input type="checkbox" id="d_turniej" ${data.turniej?'checked':''}> 🏆 Turniej</label>
-      <label><input type="checkbox" id="d_analiza" ${data.analiza?'checked':''}> 🧠 Analiza</label>
-      <label><input type="checkbox" id="d_regeneracja" ${data.regeneracja?'checked':''}> 😴 Regeneracja</label>
+      <label><input type="checkbox" id="d_trening" ${data.trening?"checked":""}> 🎯 Trening</label>
+      <label><input type="checkbox" id="d_turniej" ${data.turniej?"checked":""}> 🏆 Turniej</label>
+      <label><input type="checkbox" id="d_analiza" ${data.analiza?"checked":""}> 🧠 Analiza</label>
+      <label><input type="checkbox" id="d_regeneracja" ${data.regeneracja?"checked":""}> 😴 Regeneracja</label>
     </div>
   `;
 
   const autosave=debounce(()=>saveDay(key,{
-    text:el.querySelector('#plan').value,
-    link:el.querySelector('#link').value,
-    coachInfo:el.querySelector('#coachInfo').value,
-    coachDone:el.querySelector('#coachDone').checked
+    text:el.querySelector("#plan").value,
+    link:el.querySelector("#link").value,
+    coachInfo:el.querySelector("#coachInfo").value,
+    coachDone:el.querySelector("#coachDone").checked
   }));
 
-  el.querySelectorAll('textarea,input').forEach(i=>i.oninput=autosave);
+  el.querySelectorAll("textarea,input").forEach(i=>i.oninput=autosave);
 
-  ['trening','turniej','analiza','regeneracja'].forEach(f=>{
-    el.querySelector('#d_'+f).onchange=e=>saveDay(key,{[f]:e.target.checked});
+  ["trening","turniej","analiza","regeneracja"].forEach(f=>{
+    el.querySelector("#d_"+f).onchange=e=>saveDay(key,{[f]:e.target.checked});
   });
 
   starsIcons(key,data,el);
@@ -156,65 +164,52 @@ async function renderDay(date){
 
 /* ================= MIESIĄC ================= */
 async function renderMonth(){
-  currentView='month';
-  calendarEl.innerHTML='';
-  calendarEl.style.gridTemplateColumns='repeat(7,1fr)';
+  currentView="month";
+  calendarEl.innerHTML="";
+  calendarEl.style.gridTemplateColumns="repeat(7,1fr)";
 
   const y=currentDate.getFullYear(), m=currentDate.getMonth();
-  titleEl.textContent=
-    `Maja Matwiejczuk – ${currentDate.toLocaleDateString('pl-PL',{month:'long',year:'numeric'})}`;
+  titleEl.textContent =
+    `Maja Matwiejczuk – ${currentDate.toLocaleDateString("pl-PL",{month:"long",year:"numeric"})}`;
 
   const first=new Date(y,m,1).getDay()||7;
   const days=new Date(y,m+1,0).getDate();
-  for(let i=1;i<first;i++) calendarEl.appendChild(document.createElement('div'));
+
+  for(let i=1;i<first;i++) calendarEl.appendChild(document.createElement("div"));
 
   for(let d=1;d<=days;d++){
     const date=new Date(y,m,d);
     const key=date.toISOString().slice(0,10);
-    const data=await loadDay(key);
+    const data=await loadDaySafe(key);
 
-    const el=document.createElement('div'); el.className='day';
-    el.ondblclick=()=>renderDay(date);
+    const el=document.createElement("div");
+    el.className="day";
     el.innerHTML=`<b>${d}</b>`;
+    el.ondblclick=()=>renderDay(date);
     starsIcons(key,data,el);
     calendarEl.appendChild(el);
   }
 }
 
 /* ================= START ================= */
-homeBtn.onclick = () => renderMonth();
-monthBtn.onclick = () => renderMonth();
-dayBtn.onclick   = () => renderDay(currentDate);
+homeBtn.onclick = renderMonth;
+monthBtn.onclick = renderMonth;
+dayBtn.onclick   = ()=>renderDay(currentDate);
 
-async function startApp() {
-  try {
-    updateCountdown();
-    await updateStarsCounter();
-    await renderMonth();
-  } catch (e) {
-    console.error("Błąd startu aplikacji:", e);
-    calendarEl.innerHTML = "<p>Błąd ładowania kalendarza</p>";
-  }
-}
-
-
-startApp();
-
+(async function start(){
+  updateCountdown();
+  await updateStarsCounter();
+  await renderMonth();
+})();
 </script>
 
 <style>
 body{font-family:Arial;background:#f4f4f4;margin:0}
-.top{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:10px 14px;background:#fff;border-bottom:2px solid #000
-}
+.top{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#fff;border-bottom:2px solid #000}
 .title-box{display:flex;align-items:center;gap:12px}
 .player-name{font-size:22px;font-weight:bold}
 .club-logo{height:42px}
-.menu button{
-  background:none;border:1px solid #000;border-radius:6px;
-  padding:6px 10px;margin-left:6px;cursor:pointer
-}
+.menu button{background:none;border:1px solid #000;border-radius:6px;padding:6px 10px;margin-left:6px;cursor:pointer}
 .menu button:hover{background:#000;color:#fff}
 .calendar{display:grid;gap:8px;padding:10px}
 .day{background:#fff;padding:8px;border-radius:8px;display:flex;flex-direction:column;gap:6px}
@@ -222,7 +217,6 @@ textarea{min-height:80px}
 .row{display:flex;gap:10px;align-items:center}
 .checks{display:flex;gap:10px;flex-wrap:wrap}
 span{cursor:pointer;font-size:20px}
-.coach{font-weight:bold}
 </style>
 </head>
 

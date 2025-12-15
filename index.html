@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>Kalendarz przygotowań – Maja Matwiejczuk</title>
+<title>Droga do MP – Maja Matwiejczuk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script type="module" defer>
@@ -61,14 +61,12 @@ function renderChecklist(key, data, el){
   const box = document.createElement("div");
   box.className = "checks";
 
-  const items = [
+  [
     ["trening","🎯 Trening"],
     ["turniej","🏆 Turniej"],
     ["analiza","🧠 Analiza"],
     ["regeneracja","😴 Regeneracja"]
-  ];
-
-  items.forEach(([field,label])=>{
+  ].forEach(([field,label])=>{
     const lbl=document.createElement("label");
     lbl.style.display="flex";
     lbl.style.alignItems="center";
@@ -91,10 +89,25 @@ async function loadTournaments(){
   const snap = await getDocs(collection(db,"tournaments"));
   return snap.docs.map(d=>({id:d.id,...d.data()}));
 }
+
+/* 🔥 POPRAWIONA FUNKCJA ZAKRESU DAT */
 function tournamentForDay(date,tournaments){
   return tournaments.find(t=>{
-    const s=new Date(t.start), e=new Date(t.end);
-    return date>=s && date<=e;
+    const start = new Date(t.start + "T00:00:00");
+    const end   = new Date(t.end   + "T23:59:59");
+    return date >= start && date <= end;
+  });
+}
+
+/* ================= TRYB DNIA TURNIEJOWEGO ================= */
+async function applyTournamentDayMode(key, data){
+  if(data._tournamentApplied) return;
+
+  await saveDay(key,{
+    turniej:true,
+    trening:false,
+    regeneracja:true,
+    _tournamentApplied:true
   });
 }
 
@@ -177,13 +190,17 @@ async function renderMonth(){
     el.className="day";
     if(t) el.classList.add("tournament");
 
-    el.innerHTML=`<strong>${d}</strong><textarea rows="2">${data.text||""}</textarea>`;
-    el.querySelector("textarea").oninput=debounce(()=>saveDay(key,{text:el.querySelector("textarea").value}));
+    el.innerHTML=`<strong>${d}</strong>
+      <textarea rows="2">${data.text||""}</textarea>`;
+
+    el.querySelector("textarea").oninput=
+      debounce(()=>saveDay(key,{text:el.querySelector("textarea").value}));
 
     if(t){
       const badge=document.createElement("div");
-      badge.className="tbadge";
-      badge.textContent="🏆 "+t.name;
+      badge.textContent="🏆 " + t.name;
+      badge.style.fontWeight="bold";
+      badge.style.fontSize="13px";
       el.appendChild(badge);
     }
 
@@ -204,12 +221,20 @@ async function renderDay(date){
   const tournaments=await loadTournaments();
   const t=tournamentForDay(date,tournaments);
 
+  if(t){
+    await applyTournamentDayMode(key,data);
+    data.turniej=true;
+    data.trening=false;
+    data.regeneracja=true;
+  }
+
   const el=document.createElement("div");
   el.className="day";
+  if(t) el.classList.add("tournament-day");
 
   if(t){
     const info=document.createElement("div");
-    info.textContent="🏆 Turniej: "+t.name;
+    info.textContent="🏆 Turniej: " + t.name;
     info.style.fontWeight="bold";
     el.appendChild(info);
   }
@@ -281,8 +306,6 @@ tournamentsBtn.onclick=renderTournaments;
 <style>
 body{margin:0;font-family:Arial;background:#f4f4f4}
 header{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#fff;border-bottom:2px solid #000}
-.header-left{display:flex;align-items:center;gap:12px}
-.header-left img{height:40px}
 .menu button{margin-left:6px}
 .stats{display:flex;justify-content:space-between;padding:6px 10px;font-weight:bold}
 .calendar{display:grid;gap:8px;padding:10px}
@@ -292,18 +315,14 @@ textarea{width:100%;resize:vertical}
 .row{display:flex;gap:6px;align-items:center}
 .checks{display:flex;gap:10px;flex-wrap:wrap}
 span{cursor:pointer;font-size:20px}
-.tournament{border:2px solid crimson}
-.tbadge{font-size:11px;color:crimson}
+.tournament{border:2px solid crimson;background:#fff9db}
+.tournament-day{border:3px solid crimson;background:#fff3cd}
 </style>
 </head>
 
 <body>
 <header>
-  <div class="header-left">
-    <strong>Maja Matwiejczuk</strong>
-    <img src="logo.png" alt="KSz Biało-Czarni Bolszewo">
-  </div>
-  <div id="viewTitle"></div>
+  <strong>Droga do MP – Maja Matwiejczuk</strong>
   <nav class="menu">
     <button id="homeBtn">🏠</button>
     <button id="prevMonthBtn">⬅</button>

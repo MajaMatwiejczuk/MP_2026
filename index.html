@@ -1,209 +1,224 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Kalendarz przygotowań szachowych – Maja Matwiejczuk</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8" />
+<title>Kalendarz przygotowań szachowych – Maja Matwiejczuk</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // 🔐 Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyCnMfYLnkVcttfpjcfisGv1s-Nx-pL4jFk",
-      authDomain: "maja2026-2ee26.firebaseapp.com",
-      projectId: "maja2026-2ee26",
-      storageBucket: "maja2026-2ee26.firebasestorage.app",
-      messagingSenderId: "365178420968",
-      appId: "1:365178420968:web:2081cdd7ae556d6eb6135d"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyCnMfYLnkVcttfpjcfisGv1s-Nx-pL4jFk",
+  authDomain: "maja2026-2ee26.firebaseapp.com",
+  projectId: "maja2026-2ee26",
+  storageBucket: "maja2026-2ee26.firebasestorage.app",
+  messagingSenderId: "365178420968",
+  appId: "1:365178420968:web:2081cdd7ae556d6eb6135d"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    const calendarEl = document.getElementById('calendar');
-    const titleEl = document.getElementById('title');
-    const monthBtn = document.getElementById('monthBtn');
-    const weekBtn = document.getElementById('weekBtn');
-    const dayBtn = document.getElementById('dayBtn');
+const calendarEl = document.getElementById('calendar');
+const titleEl = document.getElementById('title');
+const monthBtn = document.getElementById('monthBtn');
+const weekBtn = document.getElementById('weekBtn');
+const dayBtn = document.getElementById('dayBtn');
+const homeBtn = document.getElementById('homeBtn');
 
-    let currentDate = new Date();
-    const mpStart = new Date('2026-02-28');
-    const mpEnd = new Date('2026-03-08');
+let currentDate = new Date();
+const mpStart = new Date('2026-02-28');
+const mpEnd = new Date('2026-03-08');
+const tournamentDates = [
+  { start: new Date('2025-12-28'), end: new Date('2025-12-29'), name: 'Końcówka Roku – Malbork' }
+];
 
-    function debounce(fn, delay = 800) {
-      let t;
-      return (...args) => {
-        clearTimeout(t);
-        t = setTimeout(() => fn(...args), delay);
-      };
-    }
+function debounce(fn, delay = 800) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
 
-    async function saveDay(key, data) {
-      await setDoc(doc(db, 'calendar', key), data, { merge: true });
-    }
+async function saveDay(key, data) {
+  await setDoc(doc(db, 'calendar', key), data, { merge: true });
+}
 
-    async function loadDay(key) {
-      const snap = await getDoc(doc(db, 'calendar', key));
-      return snap.exists() ? snap.data() : {};
-    }
+async function loadDay(key) {
+  const snap = await getDoc(doc(db, 'calendar', key));
+  return snap.exists() ? snap.data() : {};
+}
 
-    function setView(v) {
-      monthBtn.classList.toggle('active', v === 'month');
-      weekBtn.classList.toggle('active', v === 'week');
-      dayBtn.classList.toggle('active', v === 'day');
-      if (v === 'month') renderMonth();
-      if (v === 'week') renderWeek();
-      if (v === 'day') renderDay(new Date());
-    }
+function setView(v) {
+  monthBtn.classList.toggle('active', v === 'month');
+  weekBtn.classList.toggle('active', v === 'week');
+  dayBtn.classList.toggle('active', v === 'day');
+  if (v === 'month') renderMonth();
+  if (v === 'week') renderWeek();
+  if (v === 'day') renderDay(new Date());
+}
 
-    monthBtn.onclick = () => setView('month');
-    weekBtn.onclick = () => setView('week');
-    dayBtn.onclick = () => setView('day');
+monthBtn.onclick = () => setView('month');
+weekBtn.onclick = () => setView('week');
+dayBtn.onclick = () => setView('day');
+homeBtn.onclick = () => setView('month');
 
-    async function renderMonth() {
-      calendarEl.innerHTML = '';
-      calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+function isTournament(date) {
+  return tournamentDates.some(t => date >= t.start && date <= t.end);
+}
 
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      titleEl.textContent = currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+async function renderMonth() {
+  calendarEl.innerHTML = '';
+  calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
 
-      const firstDay = new Date(year, month, 1).getDay() || 7;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  titleEl.textContent = currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
 
-      for (let i = 1; i < firstDay; i++) calendarEl.appendChild(document.createElement('div'));
+  const firstDay = new Date(year, month, 1).getDay() || 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      for (let d = 1; d <= daysInMonth; d++) {
-        const date = new Date(year, month, d);
-        const key = date.toISOString().slice(0,10);
-        const data = await loadDay(key);
+  for (let i = 1; i < firstDay; i++) calendarEl.appendChild(document.createElement('div'));
 
-        const dayEl = document.createElement('div');
-        dayEl.className = 'day';
-        if (date >= mpStart && date <= mpEnd) dayEl.classList.add('mp');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const key = date.toISOString().slice(0,10);
+    const data = await loadDay(key);
 
-        dayEl.innerHTML = `
-          <header>${d}</header>
-          <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
-          <input placeholder="Link Lichess" value="${data.link || ''}" />
-          <small class="status"></small>
-        `;
+    const dayEl = document.createElement('div');
+    dayEl.className = 'day';
+    dayEl.style.height = '150px';
+    if (date >= mpStart && date <= mpEnd) dayEl.classList.add('mp');
+    if (isTournament(date)) dayEl.classList.add('tournament');
 
-        const textarea = dayEl.querySelector('textarea');
-        const input = dayEl.querySelector('input');
-        const status = dayEl.querySelector('.status');
+    dayEl.innerHTML = `
+      <header>${d}</header>
+      <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
+      <input placeholder="Link Lichess" value="${data.link || ''}" />
+      <small class="status"></small>
+    `;
 
-        const autosave = debounce(async () => {
-          status.textContent = '⏳ zapisywanie…';
-          await saveDay(key, { text: textarea.value, link: input.value });
-          status.textContent = '✅ zapisano';
-        });
+    const textarea = dayEl.querySelector('textarea');
+    const input = dayEl.querySelector('input');
+    const status = dayEl.querySelector('.status');
 
-        textarea.addEventListener('input', autosave);
-        input.addEventListener('input', autosave);
+    const autosave = debounce(async () => {
+      status.textContent = '⏳ zapisywanie…';
+      await saveDay(key, { text: textarea.value, link: input.value });
+      status.textContent = '✅ zapisano';
+    });
 
-        calendarEl.appendChild(dayEl);
-      }
-    }
+    textarea.addEventListener('input', autosave);
+    input.addEventListener('input', autosave);
 
-    async function renderWeek() {
-      calendarEl.innerHTML = '';
-      calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+    calendarEl.appendChild(dayEl);
+  }
+}
 
-      const today = new Date();
-      const dayOfWeek = (today.getDay() || 7) - 1;
-      const monday = new Date(today);
-      monday.setDate(today.getDate() - dayOfWeek);
+async function renderWeek() {
+  calendarEl.innerHTML = '';
+  calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
 
-      titleEl.textContent = `Tydzień od ${monday.toLocaleDateString('pl-PL')}`;
+  const today = new Date();
+  const dayOfWeek = (today.getDay() || 7) - 1;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dayOfWeek);
 
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(monday);
-        date.setDate(monday.getDate() + i);
-        const key = date.toISOString().slice(0,10);
-        const data = await loadDay(key);
+  titleEl.textContent = `Tydzień od ${monday.toLocaleDateString('pl-PL')}`;
 
-        const dayEl = document.createElement('div');
-        dayEl.className = 'day';
-        dayEl.innerHTML = `
-          <header>${date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' })}</header>
-          <textarea placeholder="Notatka dnia">${data.text || ''}</textarea>
-          <small class="status"></small>
-        `;
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    const key = date.toISOString().slice(0,10);
+    const data = await loadDay(key);
 
-        const textarea = dayEl.querySelector('textarea');
-        const status = dayEl.querySelector('.status');
+    const dayEl = document.createElement('div');
+    dayEl.className = 'day';
+    dayEl.style.height = '250px';
+    if (isTournament(date)) dayEl.classList.add('tournament');
 
-        const autosave = debounce(async () => {
-          status.textContent = '⏳ zapisywanie…';
-          await saveDay(key, { text: textarea.value });
-          status.textContent = '✅ zapisano';
-        });
+    dayEl.innerHTML = `
+      <header>${date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' })}</header>
+      <textarea placeholder="Notatka dnia">${data.text || ''}</textarea>
+      <small class="status"></small>
+    `;
 
-        textarea.addEventListener('input', autosave);
-        calendarEl.appendChild(dayEl);
-      }
-    }
+    const textarea = dayEl.querySelector('textarea');
+    const status = dayEl.querySelector('.status');
 
-    async function renderDay(date) {
-      calendarEl.innerHTML = '';
-      calendarEl.style.gridTemplateColumns = '1fr';
-      const key = date.toISOString().slice(0,10);
-      const data = await loadDay(key);
-      titleEl.textContent = date.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+    const autosave = debounce(async () => {
+      status.textContent = '⏳ zapisywanie…';
+      await saveDay(key, { text: textarea.value });
+      status.textContent = '✅ zapisano';
+    });
 
-      const dayEl = document.createElement('div');
-      dayEl.className = 'day';
-      dayEl.innerHTML = `
-        <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
-        <input placeholder="Link Lichess" value="${data.link || ''}" />
-        <small class="status"></small>
-      `;
+    textarea.addEventListener('input', autosave);
+    calendarEl.appendChild(dayEl);
+  }
+}
 
-      const textarea = dayEl.querySelector('textarea');
-      const input = dayEl.querySelector('input');
-      const status = dayEl.querySelector('.status');
+async function renderDay(date) {
+  calendarEl.innerHTML = '';
+  calendarEl.style.gridTemplateColumns = '1fr';
+  const key = date.toISOString().slice(0,10);
+  const data = await loadDay(key);
+  titleEl.textContent = date.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
 
-      const autosave = debounce(async () => {
-        status.textContent = '⏳ zapisywanie…';
-        await saveDay(key, { text: textarea.value, link: input.value });
-        status.textContent = '✅ zapisano';
-      });
+  const dayEl = document.createElement('div');
+  dayEl.className = 'day';
+  dayEl.style.height = '350px';
+  dayEl.innerHTML = `
+    <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
+    <input placeholder="Link Lichess" value="${data.link || ''}" />
+    <small class="status"></small>
+  `;
 
-      textarea.addEventListener('input', autosave);
-      input.addEventListener('input', autosave);
+  const textarea = dayEl.querySelector('textarea');
+  const input = dayEl.querySelector('input');
+  const status = dayEl.querySelector('.status');
 
-      calendarEl.appendChild(dayEl);
-    }
+  const autosave = debounce(async () => {
+    status.textContent = '⏳ zapisywanie…';
+    await saveDay(key, { text: textarea.value, link: input.value });
+    status.textContent = '✅ zapisano';
+  });
 
-    window.addEventListener('DOMContentLoaded', () => renderMonth());
-  </script>
+  textarea.addEventListener('input', autosave);
+  input.addEventListener('input', autosave);
 
-  <style>
-    body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; }
-    header.top { background:#000; color:#fff; padding:10px; display:flex; justify-content:space-between; align-items:center; }
-    .views button { margin:0 4px; }
-    .calendar { display:grid; gap:8px; padding:10px; }
-    .day { background:#fff; border-radius:8px; padding:6px; box-shadow:0 0 4px rgba(0,0,0,.1); }
-    .day header { font-weight:bold; margin-bottom:4px; }
-    textarea, input { width:100%; margin-top:4px; }
-    .mp { border:2px solid gold; }
-    .active { background:gold; }
-  </style>
+  calendarEl.appendChild(dayEl);
+}
+
+window.addEventListener('DOMContentLoaded', () => renderMonth());
+</script>
+
+<style>
+body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; }
+header.top { background:#000; color:#fff; padding:10px; display:flex; justify-content:space-between; align-items:center; }
+.views button { margin:0 4px; }
+.calendar { display:grid; gap:8px; padding:10px; }
+.day { background:#fff; border-radius:8px; padding:6px; box-shadow:0 0 4px rgba(0,0,0,.1); }
+.day header { font-weight:bold; margin-bottom:4px; }
+textarea, input { width:100%; margin-top:4px; }
+.mp { border:2px solid gold; }
+.tournament { border:2px solid red; background:#fff0f0; }
+.active { background:gold; }
+#homeBtn { margin-left:10px; }
+</style>
 </head>
 <body>
-  <header class="top">
-    <h1 id="title">Kalendarz przygotowań</h1>
-    <div class="views">
-      <button id="monthBtn" class="active">Miesiąc</button>
-      <button id="weekBtn">Tydzień</button>
-      <button id="dayBtn">Dzień</button>
-    </div>
-  </header>
-
-  <main id="calendar" class="calendar"></main>
+<header class="top">
+  <h1 id="title">Kalendarz przygotowań</h1>
+  <div class="views">
+    <button id="homeBtn">🏠 Strona główna</button>
+    <button id="monthBtn" class="active">Miesiąc</button>
+    <button id="weekBtn">Tydzień</button>
+    <button id="dayBtn">Dzień</button>
+  </div>
+</header>
+<main id="calendar" class="calendar"></main>
 </body>
 </html>

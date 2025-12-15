@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Przygotowania do MP 2026 – Maja Matwiejczuk</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --black: #111;
+      --white: #fff;
+      --gray: #e6e6e6;
+      --accent: #4caf50;
+      --accent2: #ff9800;
+      --accent3: #2196f3;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f7f7f7;
+      color: var(--black);
+    }
+
+    header {
+      background: var(--black);
+      color: var(--white);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+
+    header p {
+      margin: 0.3rem 0 0;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .controls button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      background: var(--gray);
+      font-weight: 600;
+    }
+
+    .controls button.active {
+      background: var(--black);
+      color: var(--white);
+    }
+
+    .calendar {
+      max-width: 1200px;
+      margin: auto;
+      padding: 0 1rem 2rem;
+    }
+
+    .month-title {
+      text-align: center;
+      font-weight: bold;
+      margin: 1rem 0;
+      font-size: 1.1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.5rem;
+    }
+
+    .day {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 0.5rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      min-height: 130px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .day header {
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-bottom: 0.2rem;
+    }
+
+    .day textarea {
+      flex: 1;
+      resize: none;
+      border-radius: 8px;
+      border: 1px solid var(--gray);
+      padding: 0.3rem;
+      font-size: 0.75rem;
+    }
+
+    .day input {
+      margin-top: 0.2rem;
+      border-radius: 8px;
+      border: 1px solid var(--gray);
+      padding: 0.25rem;
+      font-size: 0.7rem;
+    }
+
+    .event {
+      background: var(--accent2);
+      border-radius: 8px;
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+      font-weight: bold;
+      margin-bottom: 0.2rem;
+    }
+
+    .mp {
+      background: repeating-linear-gradient(45deg,#000,#000 6px,#fff 6px,#fff 12px);
+      color: #000;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      opacity: 0.6;
+      padding-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Przygotowania do Mistrzostw Polski 2026 ♟️</h1>
+  <p>Maja Matwiejczuk (9 lat) • KSz Biało-Czarni Bolszewo</p>
+</header>
+
+<div class="controls">
+  <button id="monthBtn" class="active">Miesiąc</button>
+  <button id="weekBtn">Tydzień</button>
+  <button id="dayBtn">Dzień</button>
+</div>
+
+<section class="calendar">
+  <div class="month-title" id="title"></div>
+  <div class="grid" id="calendar"></div>
+</section>
+
+<footer>
+  Dynamiczny arkusz treningowy • zapis lokalny • offline
+</footer>
+
+<script type="module">
+// =====================
+// FIREBASE – KONFIGURACJA (UZUPEŁNISZ DANYMI Z GOOGLE)
+// =====================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_AUTH_DOMAIN",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_STORAGE",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// =====================
+// KALENDARZ – LOGIKA
+// =====================
+const calendarEl = document.getElementById('calendar');
+const titleEl = document.getElementById('title');
+
+const startDate = new Date();
+const mpStart = new Date('2026-02-28');
+const mpEnd = new Date('2026-03-08');
+
+let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+async function saveDay(dateKey, data) {
+  await setDoc(doc(db, 'calendar', dateKey), data);
+}
+
+async function loadDay(dateKey) {
+  const snap = await getDoc(doc(db, 'calendar', dateKey));
+  return snap.exists() ? snap.data() : { text: '', link: '' };
+}
+
+async function renderMonth() {
+  calendarEl.innerHTML = '';
+  calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  titleEl.textContent = currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+
+  const firstDay = new Date(year, month, 1).getDay() || 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 1; i < firstDay; i++) calendarEl.appendChild(document.createElement('div'));
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const key = date.toISOString().slice(0,10);
+
+    const dayEl = document.createElement('div');
+    dayEl.className = 'day';
+    if (date >= mpStart && date <= mpEnd) dayEl.classList.add('mp');
+
+    const data = await loadDay(key);
+
+    dayEl.innerHTML = `
+      <header>${d}</header>
+      <textarea placeholder="Plan / analiza">${data.text || ''}</textarea>
+      <input placeholder="Link Lichess" value="${data.link || ''}" />
+    `;
+
+    const textarea = dayEl.querySelector('textarea');
+    const input = dayEl.querySelector('input');
+
+    textarea.onchange = () => saveDay(key, { text: textarea.value, link: input.value });
+    input.onchange = () => saveDay(key, { text: textarea.value, link: input.value });
+
+    calendarEl.appendChild(dayEl);
+  }
+}
+
+renderMonth();
+</script>
+
+</body>
+</html>

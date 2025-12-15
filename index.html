@@ -109,15 +109,18 @@ function createStarsIconsRow(key, data, container) {
     const s = document.createElement('span');
     s.textContent = data.stars >= i ? '★' : '☆';
     s.style.color = data.stars >= i ? 'gold' : 'black';
+s.onclick = async () => {
+  // TO JEST KLUCZ
+  data.stars = (data.stars === i) ? 0 : i;
 
-    s.onclick = async () => {
-      data.stars = i;
-      await saveDay(key, data);
-      updateStarsCounter();
-      if (currentView === 'month') renderMonth();
-      if (currentView === 'week') renderWeek();
-      if (currentView === 'day') renderDay(currentDate);
-    };
+  await saveDay(key, data);
+  updateStarsCounter();
+
+  if (currentView === 'month') renderMonth();
+  if (currentView === 'week') renderWeek();
+  if (currentView === 'day') renderDay(currentDate);
+};
+
     stars.appendChild(s);
   }
 

@@ -165,12 +165,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCnMfYLnkVcttfpjcfisGv1s-Nx-pL4jFk",
-  authDomain: "maja2026-2ee26.firebaseapp.com",
-  projectId: "maja2026-2ee26",
-  storageBucket: "maja2026-2ee26.firebasestorage.app",
-  messagingSenderId: "365178420968",
-  appId: "1:365178420968:web:2081cdd7ae556d6eb6135d"
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_AUTH_DOMAIN",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_STORAGE",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -196,6 +196,32 @@ async function loadDay(dateKey) {
   const snap = await getDoc(doc(db, 'calendar', dateKey));
   return snap.exists() ? snap.data() : { text: '', link: '' };
 }
+
+// ===== AUTOSAVE (DEBOUNCE) =====
+function debounce(fn, delay = 800) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+// ===== WIDOKI =====
+let view = 'month';
+
+function setView(v) {
+  view = v;
+  document.getElementById('monthBtn').classList.toggle('active', v === 'month');
+  document.getElementById('weekBtn').classList.toggle('active', v === 'week');
+  document.getElementById('dayBtn').classList.toggle('active', v === 'day');
+  if (v === 'month') renderMonth();
+  if (v === 'week') renderWeek();
+  if (v === 'day') renderDay(new Date());
+}
+
+monthBtn.onclick = () => setView('month');
+weekBtn.onclick = () => setView('week');
+dayBtn.onclick = () => setView('day');
 
 async function renderMonth() {
   calendarEl.innerHTML = '';
@@ -224,18 +250,104 @@ async function renderMonth() {
       <header>${d}</header>
       <textarea placeholder="Plan / analiza">${data.text || ''}</textarea>
       <input placeholder="Link Lichess" value="${data.link || ''}" />
+      <small class="status"></small>
     `;
 
     const textarea = dayEl.querySelector('textarea');
     const input = dayEl.querySelector('input');
+    const status = dayEl.querySelector('.status');
 
-    textarea.onchange = () => saveDay(key, { text: textarea.value, link: input.value });
-    input.onchange = () => saveDay(key, { text: textarea.value, link: input.value });
+    const autosave = debounce(async () => {
+      status.textContent = '⏳ zapisywanie…';
+      await saveDay(key, { text: textarea.value, link: input.value });
+      status.textContent = '✅ zapisano';
+    });
+
+    textarea.addEventListener('input', autosave);
+    input.addEventListener('input', autosave);
 
     calendarEl.appendChild(dayEl);
   }
 }
 
+// ===== WIDOK TYGODNIOWY =====
+async function renderWeek() {
+  calendarEl.innerHTML = '';
+  calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+
+  const today = new Date();
+  const dayOfWeek = (today.getDay() || 7) - 1; // pon=0
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dayOfWeek);
+
+  titleEl.textContent = `Tydzień ${monday.toLocaleDateString('pl-PL')}`;
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    const key = date.toISOString().slice(0,10);
+    const data = await loadDay(key);
+
+    const dayEl = document.createElement('div');
+    dayEl.className = 'day';
+
+    dayEl.innerHTML = `
+      <header>${date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' })}</header>
+      <label><input type="checkbox" /> ♟️ Taktyka</label>
+      <label><input type="checkbox" /> 📘 Debiut</label>
+      <label><input type="checkbox" /> ♞ Końcówki</label>
+      <label><input type="checkbox" /> 🧠 Analiza</label>
+      <textarea placeholder="Notatka dnia">${data.text || ''}</textarea>
+      <small class="status"></small>
+    `;
+
+    const textarea = dayEl.querySelector('textarea');
+    const status = dayEl.querySelector('.status');
+
+    const autosave = debounce(async () => {
+      status.textContent = '⏳ zapisywanie…';
+      await saveDay(key, { text: textarea.value });
+      status.textContent = '✅ zapisano';
+    });
+
+    textarea.addEventListener('input', autosave);
+    calendarEl.appendChild(dayEl);
+  }
+}
+
+// ===== WIDOK DZIENNY (PROSTY) =====
+async function renderDay(date) {
+  calendarEl.innerHTML = '';
+  calendarEl.style.gridTemplateColumns = '1fr';
+  const key = date.toISOString().slice(0,10);
+  const data = await loadDay(key);
+  titleEl.textContent = date.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const dayEl = document.createElement('div');
+  dayEl.className = 'day';
+  dayEl.innerHTML = `
+    <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
+    <input placeholder="Link Lichess" value="${data.link || ''}" />
+    <small class="status"></small>
+  `;
+
+  const textarea = dayEl.querySelector('textarea');
+  const input = dayEl.querySelector('input');
+  const status = dayEl.querySelector('.status');
+
+  const autosave = debounce(async () => {
+    status.textContent = '⏳ zapisywanie…';
+    await saveDay(key, { text: textarea.value, link: input.value });
+    status.textContent = '✅ zapisano';
+  });
+
+  textarea.addEventListener('input', autosave);
+  input.addEventListener('input', autosave);
+
+  calendarEl.appendChild(dayEl);
+}
+
+// START
 renderMonth();
 </script>
 

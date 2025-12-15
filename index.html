@@ -2,14 +2,12 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>Kalendarz przygotowań szachowych – Maja Matwiejczuk</title>
+<title>Kalendarz przygotowań – Maja Matwiejczuk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, doc, setDoc, getDoc, collection, getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ================= FIREBASE ================= */
 const firebaseConfig = {
@@ -46,7 +44,7 @@ const tournamentDates = [
 ];
 
 /* ================= HELPERS ================= */
-function debounce(fn, delay = 500) {
+function debounce(fn, delay = 400) {
   let t;
   return (...args) => {
     clearTimeout(t);
@@ -66,16 +64,24 @@ async function loadDay(key) {
 /* ================= LICZNIKI ================= */
 async function updateStarsCounter() {
   const today = new Date();
-  const docs = await getDocs(collection(db, 'calendar'));
-  let earned = 0, total = 0;
+  today.setHours(0,0,0,0);
 
+  let earned = 0;
+  let total = 0;
+
+  const docs = await getDocs(collection(db, 'calendar'));
   docs.forEach(d => {
     const day = new Date(d.id);
     if (day >= today && day <= mpEnd) {
       earned += d.data().stars || 0;
-      total += 5;
     }
   });
+
+  const daysLeft = Math.max(
+    0,
+    Math.ceil((mpEnd - today) / (1000 * 60 * 60 * 24)) + 1
+  );
+  total = daysLeft * 5;
 
   starsCounterEl.textContent = `⭐ Gwiazdki: ${earned}/${total}`;
 }
@@ -88,15 +94,16 @@ function updateCountdown() {
       : `🏆 Mistrzostwa trwają lub zakończone`;
 }
 
-setInterval(updateCountdown, 60000);
-setInterval(updateStarsCounter, 2000);
 updateCountdown();
 updateStarsCounter();
 
-/* ================= GWIAZDKI ================= */
-function createStars(key, data, container) {
-  const div = document.createElement('div');
-  div.className = 'stars';
+/* ================= GWIAZDKI + IKONY ================= */
+function createStarsIconsRow(key, data, container) {
+  const row = document.createElement('div');
+  row.className = 'stars-icons-row';
+
+  const stars = document.createElement('div');
+  stars.className = 'stars';
 
   for (let i = 1; i <= 5; i++) {
     const s = document.createElement('span');
@@ -111,43 +118,29 @@ function createStars(key, data, container) {
       if (currentView === 'week') renderWeek();
       if (currentView === 'day') renderDay(currentDate);
     };
-
-    div.appendChild(s);
+    stars.appendChild(s);
   }
-  container.appendChild(div);
-}
 
-/* ================= IKONY ================= */
-function createIcons(key, data, container) {
-  const icons = [
-    { f: 'trening', icon: '🎯' },
-    { f: 'turniej', icon: '🏆' },
-    { f: 'analiza', icon: '🧠' },
-    { f: 'regeneracja', icon: '😴' }
-  ];
+  const icons = document.createElement('div');
+  icons.className = 'icons';
 
-  const div = document.createElement('div');
-  div.className = 'icons';
+  const iconMap = {
+    trening: '🎯',
+    turniej: '🏆',
+    analiza: '🧠',
+    regeneracja: '😴'
+  };
 
-  icons.forEach(i => {
-    const wrap = document.createElement('label');
-    wrap.className = 'icon-check';
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = !!data[i.f];
-
-    cb.onchange = async () => {
-      data[i.f] = cb.checked;
-      await saveDay(key, data);
-      renderMonth();
-    };
-
-    wrap.append(cb, document.createTextNode(i.icon));
-    div.appendChild(wrap);
+  Object.keys(iconMap).forEach(f => {
+    if (data[f]) {
+      const i = document.createElement('span');
+      i.textContent = iconMap[f];
+      icons.appendChild(i);
+    }
   });
 
-  container.appendChild(div);
+  row.append(stars, icons);
+  container.appendChild(row);
 }
 
 function isTournament(date) {
@@ -171,21 +164,16 @@ async function renderDay(date) {
   dayEl.className = 'day';
 
   dayEl.innerHTML = `
-    <div class="day-section">
-      <textarea class="big-text" placeholder="Plan dnia">${data.text || ''}</textarea>
-    </div>
+    <textarea class="big-text" placeholder="Plan dnia">${data.text || ''}</textarea>
 
-    <div class="day-section">
-      <input class="text-input" placeholder="Link Lichess" value="${data.link || ''}">
-    </div>
+    <input class="text-input" placeholder="Link Lichess" value="${data.link || ''}">
 
-    <div class="day-section trainer-box">
-      <label class="trainer-check">
-        <input type="checkbox" ${data.coachDone ? 'checked' : ''}>
-        <span>Czy wykonano (informacje od trenera)</span>
-      </label>
-      <textarea class="medium-text" placeholder="Informacje od trenera">${data.coachInfo || ''}</textarea>
-    </div>
+    <label class="trainer-check">
+      <input type="checkbox" ${data.coachDone ? 'checked' : ''}>
+      <span>Czy wykonano (informacje od trenera)</span>
+    </label>
+
+    <textarea class="medium-text" placeholder="Informacje od trenera">${data.coachInfo || ''}</textarea>
 
     <small class="status"></small>
   `;
@@ -212,15 +200,11 @@ async function renderDay(date) {
   link.oninput = autosave;
   coachCheck.onchange = autosave;
 
-  createStars(key, data, dayEl);
-  createIcons(key, data, dayEl);
-
+  createStarsIconsRow(key, data, dayEl);
   calendarEl.appendChild(dayEl);
 }
 
-/* ================= MIESIĄC / TYDZIEŃ ================= */
-/* (pozostawione dokładnie jak w Twojej wersji) */
-
+/* ================= MIESIĄC ================= */
 async function renderMonth() {
   currentView = 'month';
   calendarEl.innerHTML = '';
@@ -245,36 +229,25 @@ async function renderMonth() {
 
     const dayEl = document.createElement('div');
     dayEl.className = 'day';
+    dayEl.ondblclick = () => { currentDate = date; renderDay(date); };
 
-    const t = isTournament(date);
-    if (t) dayEl.classList.add('tournament');
+    if (isTournament(date)) dayEl.classList.add('tournament');
     if (date >= mpStart && date <= mpEnd) dayEl.classList.add('mp');
 
     dayEl.innerHTML = `
-      <header>${d}${t ? ' 🏆 ' + t.name : ''}</header>
+      <header>${d}</header>
       <textarea placeholder="Notatka">${data.text || ''}</textarea>
     `;
 
-    dayEl.ondblclick = () => { currentDate = date; renderDay(date); };
-
-    createStars(key, data, dayEl);
-
-    const iconsLine = document.createElement('div');
-    iconsLine.className = 'icons-line';
-    ['trening','turniej','analiza','regeneracja'].forEach(f => {
-      if (data[f]) {
-        iconsLine.textContent += {trening:'🎯',turniej:'🏆',analiza:'🧠',regeneracja:'😴'}[f];
-      }
-    });
-
-    dayEl.appendChild(iconsLine);
+    createStarsIconsRow(key, data, dayEl);
     calendarEl.appendChild(dayEl);
   }
 }
 
+/* ================= TYDZIEŃ ================= */
 async function renderWeek() {
   currentView = 'week';
-  renderMonth(); // uproszczone, stabilne
+  renderMonth(); // stabilnie
 }
 
 /* ================= NAWIGACJA ================= */
@@ -299,25 +272,37 @@ header.top { padding:10px; display:flex; justify-content:space-between; }
   box-shadow:0 0 4px rgba(0,0,0,.1);
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:8px;
 }
 
-.day-section { display:flex; flex-direction:column; gap:6px; }
-
-.big-text { min-height:140px; }
+.big-text { min-height:120px; }
 .medium-text { min-height:80px; }
 .text-input { height:34px; }
 
-.trainer-box { border-top:1px solid #ddd; padding-top:8px; }
-.trainer-check { display:flex; gap:8px; align-items:center; font-weight:bold; }
+.trainer-check {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:bold;
+}
+
+.stars-icons-row {
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
 
 .stars span { cursor:pointer; font-size:20px; }
-.icons, .icons-line { display:flex; gap:6px; font-size:18px; }
+.icons span { font-size:18px; }
 
 .mp { border:2px solid gold; }
 .tournament { border:2px solid red; background:#fff0f0; }
 
-#countdown, #starsCounter { font-weight:bold; margin:5px 10px; display:inline-block; }
+#countdown, #starsCounter {
+  font-weight:bold;
+  margin:5px 10px;
+  display:inline-block;
+}
 </style>
 </head>
 

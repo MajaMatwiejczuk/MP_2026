@@ -60,7 +60,7 @@ function setView(v) {
   dayBtn.classList.toggle('active', v === 'day');
   if (v === 'month') renderMonth();
   if (v === 'week') renderWeek();
-  if (v === 'day') renderDay(new Date());
+  if (v === 'day') renderDay(currentDate);
 }
 
 monthBtn.onclick = () => setView('month');
@@ -81,97 +81,49 @@ function updateCountdown() {
 setInterval(updateCountdown, 60*1000);
 updateCountdown();
 
-async function renderMonth() {
-  calendarEl.innerHTML = '';
-  calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  titleEl.textContent = currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
-
-  const firstDay = new Date(year, month, 1).getDay() || 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  for (let i = 1; i < firstDay; i++) calendarEl.appendChild(document.createElement('div'));
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(year, month, d);
-    const key = date.toISOString().slice(0,10);
-    const data = await loadDay(key);
-
-    const dayEl = document.createElement('div');
-    dayEl.className = 'day';
-    dayEl.style.height = '150px';
-
-    const tournament = isTournament(date);
-    if (date >= mpStart && date <= mpEnd) dayEl.classList.add('mp');
-    if (tournament) dayEl.classList.add('tournament');
-
-    dayEl.innerHTML = `
-      <header>${d}${tournament ? ' 🏆 '+tournament.name : ''}</header>
-      <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
-      <input placeholder="Link Lichess" value="${data.link || ''}" />
-      <small class="status"></small>
-    `;
-
-    const textarea = dayEl.querySelector('textarea');
-    const input = dayEl.querySelector('input');
-    const status = dayEl.querySelector('.status');
-
-    const autosave = debounce(async () => {
-      status.textContent = '⏳ zapisywanie…';
-      await saveDay(key, { text: textarea.value, link: input.value });
-      status.textContent = '✅ zapisano';
+function createStars(key, data, container) {
+  const starContainer = document.createElement('div');
+  starContainer.className = 'stars';
+  for (let i = 1; i <= 5; i++) {
+    const star = document.createElement('span');
+    star.innerHTML = '☆';
+    if (data.stars >= i) star.innerHTML = '★';
+    star.addEventListener('click', async () => {
+      data.stars = i;
+      await saveDay(key, data);
+      [...starContainer.children].forEach((s,j) => s.innerHTML = j < i ? '★' : '☆');
     });
-
-    textarea.addEventListener('input', autosave);
-    input.addEventListener('input', autosave);
-
-    calendarEl.appendChild(dayEl);
+    starContainer.appendChild(star);
   }
+  container.appendChild(starContainer);
 }
 
-async function renderWeek() {
-  calendarEl.innerHTML = '';
-  calendarEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
-
-  const today = new Date();
-  const dayOfWeek = (today.getDay() || 7) - 1;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - dayOfWeek);
-
-  titleEl.textContent = `Tydzień od ${monday.toLocaleDateString('pl-PL')}`;
-
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + i);
-    const key = date.toISOString().slice(0,10);
-    const data = await loadDay(key);
-
-    const dayEl = document.createElement('div');
-    dayEl.className = 'day';
-    dayEl.style.height = '250px';
-    const tournament = isTournament(date);
-    if (tournament) dayEl.classList.add('tournament');
-
-    dayEl.innerHTML = `
-      <header>${date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' })}${tournament ? ' 🏆 '+tournament.name : ''}</header>
-      <textarea placeholder="Notatka dnia">${data.text || ''}</textarea>
-      <small class="status"></small>
-    `;
-
-    const textarea = dayEl.querySelector('textarea');
-    const status = dayEl.querySelector('.status');
-
-    const autosave = debounce(async () => {
-      status.textContent = '⏳ zapisywanie…';
-      await saveDay(key, { text: textarea.value });
-      status.textContent = '✅ zapisano';
+function createChecklist(key, data, container) {
+  const checklistItems = ['taktyka','debiuty','końcówki','analiza partii'];
+  const checklistDiv = document.createElement('div');
+  checklistDiv.className = 'checklist';
+  checklistItems.forEach(item => {
+    const label = document.createElement('label');
+    label.innerHTML = `<input type='checkbox' ${data[item]?'checked':''}> ${item}`;
+    label.querySelector('input').addEventListener('change', async (e) => {
+      data[item] = e.target.checked;
+      await saveDay(key,data);
     });
+    checklistDiv.appendChild(label);
+  });
+  container.appendChild(checklistDiv);
+}
 
-    textarea.addEventListener('input', autosave);
-    calendarEl.appendChild(dayEl);
-  }
+function createIcons(container) {
+  const icons = ['🎯 trening','🏆 turniej','🧠 analiza','😴 regeneracja'];
+  const iconDiv = document.createElement('div');
+  iconDiv.className = 'icons';
+  icons.forEach(ic => {
+    const span = document.createElement('span');
+    span.textContent = ic;
+    iconDiv.appendChild(span);
+  });
+  container.appendChild(iconDiv);
 }
 
 async function renderDay(date) {
@@ -183,9 +135,7 @@ async function renderDay(date) {
 
   const dayEl = document.createElement('div');
   dayEl.className = 'day';
-  dayEl.style.height = '350px';
-  const tournament = isTournament(date);
-  if (tournament) dayEl.classList.add('tournament');
+  dayEl.style.height = '400px';
 
   dayEl.innerHTML = `
     <textarea placeholder="Plan dnia">${data.text || ''}</textarea>
@@ -199,17 +149,21 @@ async function renderDay(date) {
 
   const autosave = debounce(async () => {
     status.textContent = '⏳ zapisywanie…';
-    await saveDay(key, { text: textarea.value, link: input.value });
+    await saveDay(key, { text: textarea.value, link: input.value, stars: data.stars, ...data });
     status.textContent = '✅ zapisano';
   });
 
   textarea.addEventListener('input', autosave);
   input.addEventListener('input', autosave);
 
+  createStars(key,data,dayEl);
+  createChecklist(key,data,dayEl);
+  createIcons(dayEl);
+
   calendarEl.appendChild(dayEl);
 }
 
-window.addEventListener('DOMContentLoaded', () => renderMonth());
+window.addEventListener('DOMContentLoaded', () => setView('month'));
 </script>
 
 <style>
@@ -220,11 +174,15 @@ header.top { background:#000; color:#fff; padding:10px; display:flex; justify-co
 .day { background:#fff; border-radius:8px; padding:6px; box-shadow:0 0 4px rgba(0,0,0,.1); }
 .day header { font-weight:bold; margin-bottom:4px; }
 textarea, input { width:100%; margin-top:4px; }
+textarea { min-height:100px; }
 .mp { border:2px solid gold; }
 .tournament { border:2px solid red; background:#fff0f0; }
 .active { background:gold; }
 #homeBtn { margin-left:10px; }
 #countdown { padding:5px; font-weight:bold; }
+.stars span { cursor:pointer; font-size:20px; margin-right:2px; }
+.checklist label { display:block; margin-top:4px; }
+.icons span { margin-right:6px; font-size:18px; }
 </style>
 </head>
 <body>

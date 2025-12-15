@@ -90,7 +90,6 @@ async function loadTournaments(){
   return snap.docs.map(d=>({id:d.id,...d.data()}));
 }
 
-/* 🔥 POPRAWIONA FUNKCJA ZAKRESU DAT */
 function tournamentForDay(date,tournaments){
   return tournaments.find(t=>{
     const start = new Date(t.start + "T00:00:00");
@@ -189,6 +188,7 @@ async function renderMonth(){
     const el=document.createElement("div");
     el.className="day";
     if(t) el.classList.add("tournament");
+    if(data.regeneracja) el.classList.add("regeneration-day");
 
     el.innerHTML=`<strong>${d}</strong>
       <textarea rows="2">${data.text||""}</textarea>`;
@@ -198,7 +198,7 @@ async function renderMonth(){
 
     if(t){
       const badge=document.createElement("div");
-      badge.textContent="🏆 " + t.name;
+      badge.textContent="🏆 "+t.name;
       badge.style.fontWeight="bold";
       badge.style.fontSize="13px";
       el.appendChild(badge);
@@ -231,10 +231,11 @@ async function renderDay(date){
   const el=document.createElement("div");
   el.className="day";
   if(t) el.classList.add("tournament-day");
+  if(data.regeneracja) el.classList.add("regeneration-day");
 
   if(t){
     const info=document.createElement("div");
-    info.textContent="🏆 Turniej: " + t.name;
+    info.textContent="🏆 Turniej: "+t.name;
     info.style.fontWeight="bold";
     el.appendChild(info);
   }
@@ -317,6 +318,8 @@ textarea{width:100%;resize:vertical}
 span{cursor:pointer;font-size:20px}
 .tournament{border:2px solid crimson;background:#fff9db}
 .tournament-day{border:3px solid crimson;background:#fff3cd}
+.regeneration-day{background:#e0e0e0;border-color:#9e9e9e}
+.regeneration-day textarea{background:#f5f5f5}
 </style>
 </head>
 
@@ -326,7 +329,6 @@ span{cursor:pointer;font-size:20px}
     <strong>Droga do MP – Maja Matwiejczuk</strong><br>
     <span id="viewTitle"></span>
   </div>
-
   <nav class="menu">
     <button id="homeBtn">🏠</button>
     <button id="prevMonthBtn">⬅</button>

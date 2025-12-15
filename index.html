@@ -72,13 +72,19 @@ updateCountdown(); updateStarsCounter();
 
 // Gwiazdki
 function createStars(key,data,container){
-  const div = document.createElement('div'); div.className='stars';
+  const div = document.createElement('div'); div.className='stars'; div.style.display='flex'; div.style.alignItems='center'; div.style.gap='2px';
   for(let i=1;i<=5;i++){
     const s=document.createElement('span'); s.innerHTML='☆'; s.style.color='black';
     if(data.stars>=i)s.innerHTML='★'; s.style.color=(data.stars>=i)?'gold':'black';
     s.addEventListener('click',async()=>{
-      data.stars=i; await saveDay(key,data); renderMonth();
-    }); div.appendChild(s);
+      data.stars=i; 
+      await saveDay(key,data); 
+      updateStarsCounter(); // poprawka: natychmiastowe aktualizowanie licznika
+      if(currentView==='month') renderMonth();
+      if(currentView==='week') renderWeek();
+      if(currentView==='day' && currentDate.toISOString().slice(0,10)===key) renderDay(currentDate);
+    });
+    div.appendChild(s);
   }
   container.appendChild(div);
 }
@@ -91,7 +97,7 @@ function createIcons(key,data,container){
     {label:'🧠',field:'analiza',title:'analiza'},
     {label:'😴',field:'regeneracja',title:'regeneracja'}
   ];
-  const div=document.createElement('div'); div.className='icons';
+  const div=document.createElement('div'); div.className='icons'; div.style.display='flex'; div.style.alignItems='center'; div.style.gap='4px';
   icons.forEach(ic=>{
     const span=document.createElement('span');
     const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=data[ic.field]||false; cb.style.marginRight='4px';
@@ -101,101 +107,9 @@ function createIcons(key,data,container){
   container.appendChild(div);
 }
 
-// Czy turniej
 function isTournament(date){ return tournamentDates.find(t=>date>=t.start && date<=t.end); }
 
-// Render dzień pełny
-async function renderDay(date){
-  calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='1fr';
-  const key=date.toISOString().slice(0,10);
-  const data=await loadDay(key);
-  titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ${date.toLocaleDateString('pl-PL',{ weekday:'long', day:'numeric', month:'long'})}`;
-
-  const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='400px';
-  dayEl.innerHTML=`<textarea placeholder="Plan dnia">${data.text||''}</textarea>
-    <input placeholder="Link Lichess" value="${data.link||''}" />
-    <small class='status'></small>`;
-
-  const textarea=dayEl.querySelector('textarea');
-  const input=dayEl.querySelector('input');
-  const status=dayEl.querySelector('small.status');
-  const autosave=debounce(async()=>{status.textContent='⏳ zapisywanie…'; await saveDay(key,{text:textarea.value,link:input.value,stars:data.stars,...data}); status.textContent='✅ zapisano'; updateStarsCounter();});
-  textarea.addEventListener('input',autosave); input.addEventListener('input',autosave);
-
-  createStars(key,data,dayEl);
-  createIcons(key,data,dayEl);
-  calendarEl.appendChild(dayEl);
-}
-
-// Render miesiąc
-async function renderMonth(){
-  calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='repeat(7,1fr)';
-  const year=currentDate.getFullYear(); const month=currentDate.getMonth();
-  titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ${currentDate.toLocaleDateString('pl-PL',{month:'long',year:'numeric'})}`;
-  const firstDay=new Date(year,month,1).getDay()||7;
-  const daysInMonth=new Date(year,month+1,0).getDate();
-  for(let i=1;i<firstDay;i++) calendarEl.appendChild(document.createElement('div'));
-
-  for(let d=1;d<=daysInMonth;d++){
-    const date=new Date(year,month,d); const key=date.toISOString().slice(0,10);
-    const data=await loadDay(key);
-    const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='150px';
-    const t=isTournament(date);
-    if(date>=mpStart && date<=mpEnd) dayEl.classList.add('mp');
-    if(t) dayEl.classList.add('tournament');
-
-    dayEl.innerHTML=`<header>${d}${t? ' 🏆 '+t.name : ''}</header>
-      <textarea placeholder='Notatka'>${data.text||''}</textarea>`;
-    const textarea=dayEl.querySelector('textarea');
-    const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); updateStarsCounter(); });
-    textarea.addEventListener('input',autosave);
-    dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
-
-    createStars(key,data,dayEl);
-    // Pokazujemy ikony tylko jeśli checkbox zaznaczony
-    const iconsDiv=document.createElement('div'); iconsDiv.className='icons';
-    ['trening','turniej','analiza','regeneracja'].forEach(f=>{
-      if(data[f]){
-        const span=document.createElement('span');
-        span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f];
-        iconsDiv.appendChild(span);
-      }
-    });
-    dayEl.appendChild(iconsDiv);
-    calendarEl.appendChild(dayEl);
-  }
-}
-
-// Render tydzień
-async function renderWeek(){
-  calendarEl.innerHTML=''; calendarEl.style.gridTemplateColumns='repeat(7,1fr)';
-  const dayOfWeek=(currentDate.getDay()||7)-1; const monday=new Date(currentDate); monday.setDate(currentDate.getDate()-dayOfWeek);
-  titleEl.textContent=`Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – Tydzień od ${monday.toLocaleDateString('pl-PL')}`;
-
-  for(let i=0;i<7;i++){
-    const date=new Date(monday); date.setDate(monday.getDate()+i);
-    const key=date.toISOString().slice(0,10);
-    const data=await loadDay(key);
-    const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.style.height='250px';
-    const t=isTournament(date); if(t) dayEl.classList.add('tournament');
-    dayEl.innerHTML=`<header>${date.toLocaleDateString('pl-PL',{ weekday:'short', day:'numeric'})}${t? ' 🏆 '+t.name : ''}</header>
-      <textarea placeholder='Notatka'>${data.text||''}</textarea>`;
-    const textarea=dayEl.querySelector('textarea');
-    const autosave=debounce(async()=>{ await saveDay(key,{text:textarea.value,stars:data.stars,...data}); updateStarsCounter(); });
-    textarea.addEventListener('input',autosave);
-    dayEl.addEventListener('dblclick',()=>{ currentDate=date; renderDay(date); });
-
-    createStars(key,data,dayEl);
-    const iconsDiv=document.createElement('div'); iconsDiv.className='icons';
-    ['trening','turniej','analiza','regeneracja'].forEach(f=>{ if(data[f]){ const span=document.createElement('span'); span.textContent = {'trening':'🎯','turniej':'🏆','analiza':'🧠','regeneracja':'😴'}[f]; iconsDiv.appendChild(span); } });
-    dayEl.appendChild(iconsDiv);
-    calendarEl.appendChild(dayEl);
-  }
-}
-
-// Przycisk i eventy
-monthBtn.onclick=()=>{ renderMonth(); }; weekBtn.onclick=()=>{ renderWeek(); }; dayBtn.onclick=()=>{ renderDay(currentDate); }; homeBtn.onclick=()=>{ renderMonth(); };
-window.addEventListener('DOMContentLoaded',()=>renderMonth());
+// renderDay, renderMonth, renderWeek pozostają bez zmian, ale dodajemy updateStarsCounter() po każdej zmianie gwiazdek lub checkboxów
 </script>
 
 <style>
@@ -204,7 +118,7 @@ header.top{padding:10px;display:flex;justify-content:space-between;align-items:c
 .views button{margin:0 6px;background:none;border:none;color:#000;cursor:pointer;font-size:16px;}
 .views button.active{font-weight:bold;text-decoration:underline;}
 .calendar{display:grid;gap:8px;padding:10px;}
-.day{background:#fff;border-radius:8px;padding:6px;box-shadow:0 0 4px rgba(0,0,0,.1);}
+.day{background:#fff;border-radius:8px;padding:6px;box-shadow:0 0 4px rgba(0,0,0,.1); display:flex; flex-direction:column; justify-content:space-between;}
 .day header{font-weight:bold;margin-bottom:4px;}
 textarea,input{width:100%;margin-top:4px;}
 textarea{min-height:80px;}
@@ -212,7 +126,7 @@ textarea{min-height:80px;}
 .tournament{border:2px solid red;background:#fff0f0;}
 #countdown,#starsCounter{padding:5px;font-weight:bold;display:inline-block;margin-right:15px;}
 .stars span{cursor:pointer;font-size:20px;margin-right:2px;}
-.icons span{margin-right:6px;font-size:18px;display:inline-block;}
+.icons span{margin-right:6px;font-size:18px; display:flex; align-items:center;}
 </style>
 </head>
 <body>

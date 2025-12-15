@@ -7,7 +7,9 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getFirestore, doc, setDoc, getDoc, collection, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ================= FIREBASE ================= */
 const firebaseConfig = {
@@ -35,13 +37,8 @@ const starsCounterEl = document.getElementById('starsCounter');
 let currentDate = new Date();
 let currentView = 'month';
 
-const mpStart = new Date('2026-02-28');
-const mpEnd   = new Date('2026-03-08');
-
-const tournamentDates = [
-  { start: new Date('2025-12-28'), end: new Date('2025-12-29'), name: 'Końcówka Roku – Malbork' },
-  { start: mpStart, end: mpEnd, name: 'Mistrzostwa Polski 2026' }
-];
+const mpStart = new Date(2026, 1, 28); // 28.02.2026
+const mpEnd   = new Date(2026, 2, 8);  // 08.03.2026
 
 /* ================= HELPERS ================= */
 function debounce(fn, delay = 400) {
@@ -61,41 +58,41 @@ async function loadDay(key) {
   return snap.exists() ? snap.data() : {};
 }
 
-/* ================= LICZNIKI ================= */
+/* ================= LICZNIK GWIAZDEK ================= */
 async function updateStarsCounter() {
   const today = new Date();
   today.setHours(0,0,0,0);
 
   let earned = 0;
-  let total = 0;
 
   const docs = await getDocs(collection(db, 'calendar'));
   docs.forEach(d => {
-    const day = new Date(d.id);
-    if (day >= today && day <= mpEnd) {
+    const [y, m, day] = d.id.split('-').map(Number);
+    const date = new Date(y, m - 1, day);
+    date.setHours(0,0,0,0);
+
+    if (date >= today && date <= mpEnd) {
       earned += d.data().stars || 0;
     }
   });
 
-  const daysLeft = Math.max(
-    0,
-    Math.ceil((mpEnd - today) / (1000 * 60 * 60 * 24)) + 1
-  );
-  total = daysLeft * 5;
+  const daysLeft =
+    Math.max(
+      0,
+      Math.floor((mpEnd - today) / (1000 * 60 * 60 * 24)) + 1
+    );
 
-  starsCounterEl.textContent = `⭐ Gwiazdki: ${earned}/${total}`;
+  starsCounterEl.textContent = `⭐ Gwiazdki: ${earned}/${daysLeft * 5}`;
 }
 
+/* ================= COUNTDOWN ================= */
 function updateCountdown() {
-  const diff = Math.ceil((mpStart - new Date()) / (1000 * 60 * 60 * 24));
+  const diff = Math.ceil((mpStart - new Date()) / (1000*60*60*24));
   countdownEl.textContent =
     diff > 0
       ? `⏳ Dni do Mistrzostw Polski: ${diff}`
       : `🏆 Mistrzostwa trwają lub zakończone`;
 }
-
-updateCountdown();
-updateStarsCounter();
 
 /* ================= GWIAZDKI + IKONY ================= */
 function createStarsIconsRow(key, data, container) {
@@ -109,35 +106,26 @@ function createStarsIconsRow(key, data, container) {
     const s = document.createElement('span');
     s.textContent = data.stars >= i ? '★' : '☆';
     s.style.color = data.stars >= i ? 'gold' : 'black';
-s.onclick = async () => {
-  // TO JEST KLUCZ
-  data.stars = (data.stars === i) ? 0 : i;
 
-  await saveDay(key, data);
-  updateStarsCounter();
-
-  if (currentView === 'month') renderMonth();
-  if (currentView === 'week') renderWeek();
-  if (currentView === 'day') renderDay(currentDate);
-};
+    s.onclick = async () => {
+      data.stars = (data.stars === i) ? 0 : i;
+      await saveDay(key, data);
+      updateStarsCounter();
+      if (currentView === 'month') renderMonth();
+      if (currentView === 'day') renderDay(currentDate);
+    };
 
     stars.appendChild(s);
   }
 
   const icons = document.createElement('div');
   icons.className = 'icons';
+  const map = { trening:'🎯', turniej:'🏆', analiza:'🧠', regeneracja:'😴' };
 
-  const iconMap = {
-    trening: '🎯',
-    turniej: '🏆',
-    analiza: '🧠',
-    regeneracja: '😴'
-  };
-
-  Object.keys(iconMap).forEach(f => {
+  Object.keys(map).forEach(f => {
     if (data[f]) {
       const i = document.createElement('span');
-      i.textContent = iconMap[f];
+      i.textContent = map[f];
       icons.appendChild(i);
     }
   });
@@ -146,48 +134,37 @@ s.onclick = async () => {
   container.appendChild(row);
 }
 
-function isTournament(date) {
-  return tournamentDates.find(t => date >= t.start && date <= t.end);
-}
-
 /* ================= WIDOK DNIA ================= */
 async function renderDay(date) {
   currentView = 'day';
   calendarEl.innerHTML = '';
   calendarEl.style.gridTemplateColumns = '1fr';
 
-  const key = date.toISOString().slice(0, 10);
+  const key = date.toISOString().slice(0,10);
   const data = await loadDay(key);
 
   titleEl.textContent =
     `Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ` +
-    date.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+    date.toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long'});
 
   const dayEl = document.createElement('div');
   dayEl.className = 'day';
 
   dayEl.innerHTML = `
-    <textarea class="big-text" placeholder="Plan dnia">${data.text || ''}</textarea>
-
-    <input class="text-input" placeholder="Link Lichess" value="${data.link || ''}">
-
+    <textarea class="big-text" placeholder="Plan dnia">${data.text||''}</textarea>
+    <input class="text-input" placeholder="Link Lichess" value="${data.link||''}">
     <label class="trainer-check">
-      <input type="checkbox" ${data.coachDone ? 'checked' : ''}>
+      <input type="checkbox" ${data.coachDone?'checked':''}>
       <span>Czy wykonano (informacje od trenera)</span>
     </label>
-
-    <textarea class="medium-text" placeholder="Informacje od trenera">${data.coachInfo || ''}</textarea>
-
-    <small class="status"></small>
+    <textarea class="medium-text" placeholder="Informacje od trenera">${data.coachInfo||''}</textarea>
   `;
 
   const [plan, coachInfo] = dayEl.querySelectorAll('textarea');
   const link = dayEl.querySelector('input');
-  const coachCheck = dayEl.querySelector('.trainer-check input');
-  const status = dayEl.querySelector('.status');
+  const coachCheck = dayEl.querySelector('input[type=checkbox]');
 
   const autosave = debounce(async () => {
-    status.textContent = '⏳ zapisywanie…';
     await saveDay(key, {
       ...data,
       text: plan.value,
@@ -195,7 +172,6 @@ async function renderDay(date) {
       coachInfo: coachInfo.value,
       coachDone: coachCheck.checked
     });
-    status.textContent = '✅ zapisano';
   });
 
   plan.oninput = autosave;
@@ -218,94 +194,61 @@ async function renderMonth() {
 
   titleEl.textContent =
     `Maja Matwiejczuk, KSz Biało-Czarni Bolszewo – ` +
-    currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+    currentDate.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});
 
-  const firstDay = new Date(y, m, 1).getDay() || 7;
-  const days = new Date(y, m + 1, 0).getDate();
+  const first = new Date(y,m,1).getDay()||7;
+  const days = new Date(y,m+1,0).getDate();
 
-  for (let i = 1; i < firstDay; i++) calendarEl.appendChild(document.createElement('div'));
+  for(let i=1;i<first;i++) calendarEl.appendChild(document.createElement('div'));
 
-  for (let d = 1; d <= days; d++) {
-    const date = new Date(y, m, d);
-    const key = date.toISOString().slice(0, 10);
-    const data = await loadDay(key);
+  for(let d=1;d<=days;d++){
+    const date=new Date(y,m,d);
+    const key=date.toISOString().slice(0,10);
+    const data=await loadDay(key);
 
-    const dayEl = document.createElement('div');
-    dayEl.className = 'day';
-    dayEl.ondblclick = () => { currentDate = date; renderDay(date); };
+    const dayEl=document.createElement('div');
+    dayEl.className='day';
+    dayEl.ondblclick=()=>{ currentDate=date; renderDay(date); };
 
-    if (isTournament(date)) dayEl.classList.add('tournament');
-    if (date >= mpStart && date <= mpEnd) dayEl.classList.add('mp');
-
-    dayEl.innerHTML = `
-      <header>${d}</header>
-      <textarea placeholder="Notatka">${data.text || ''}</textarea>
-    `;
-
-    createStarsIconsRow(key, data, dayEl);
+    dayEl.innerHTML=`<header>${d}</header><textarea>${data.text||''}</textarea>`;
+    createStarsIconsRow(key,data,dayEl);
     calendarEl.appendChild(dayEl);
   }
 }
 
-/* ================= TYDZIEŃ ================= */
-async function renderWeek() {
-  currentView = 'week';
-  renderMonth(); // stabilnie
-}
-
-/* ================= NAWIGACJA ================= */
+/* ================= START ================= */
 monthBtn.onclick = renderMonth;
-weekBtn.onclick = renderWeek;
 dayBtn.onclick = () => renderDay(currentDate);
 homeBtn.onclick = renderMonth;
 
-window.onload = renderMonth;
+window.onload = () => {
+  updateCountdown();
+  updateStarsCounter();
+  renderMonth();
+};
 </script>
 
 <style>
-body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; }
+body { font-family: Arial; background:#f4f4f4; margin:0; }
 header.top { padding:10px; display:flex; justify-content:space-between; }
 .views button { background:none; border:none; font-size:16px; cursor:pointer; }
 .calendar { display:grid; gap:8px; padding:10px; }
-
 .day {
   background:#fff;
   border-radius:8px;
   padding:8px;
-  box-shadow:0 0 4px rgba(0,0,0,.1);
   display:flex;
   flex-direction:column;
   gap:8px;
 }
-
 .big-text { min-height:120px; }
 .medium-text { min-height:80px; }
 .text-input { height:34px; }
-
-.trainer-check {
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-weight:bold;
-}
-
-.stars-icons-row {
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
+.trainer-check { display:flex; gap:8px; align-items:center; font-weight:bold; }
+.stars-icons-row { display:flex; align-items:center; gap:12px; }
 .stars span { cursor:pointer; font-size:20px; }
 .icons span { font-size:18px; }
-
-.mp { border:2px solid gold; }
-.tournament { border:2px solid red; background:#fff0f0; }
-
-#countdown, #starsCounter {
-  font-weight:bold;
-  margin:5px 10px;
-  display:inline-block;
-}
+#countdown,#starsCounter { font-weight:bold; margin:6px 10px; display:inline-block; }
 </style>
 </head>
 
@@ -315,7 +258,6 @@ header.top { padding:10px; display:flex; justify-content:space-between; }
   <div class="views">
     <button id="homeBtn">Strona główna</button>
     <button id="monthBtn">Miesiąc</button>
-    <button id="weekBtn">Tydzień</button>
     <button id="dayBtn">Dzień</button>
   </div>
 </header>

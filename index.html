@@ -26,7 +26,6 @@ const db = getFirestore(app);
 /* ========= DOM ========= */
 const calendarEl = document.getElementById('calendar');
 const titleEl = document.getElementById('title');
-const monthBtn = document.getElementById('monthBtn');
 const dayBtn = document.getElementById('dayBtn');
 const homeBtn = document.getElementById('homeBtn');
 const countdownEl = document.getElementById('countdown');
@@ -180,7 +179,6 @@ async function renderMonth(){
 
 /* ========= START ========= */
 homeBtn.onclick=renderMonth;
-monthBtn.onclick=renderMonth;
 dayBtn.onclick=()=>renderDay(currentDate);
 
 window.onload=()=>{

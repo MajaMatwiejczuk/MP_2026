@@ -5,7 +5,6 @@
 <title>Droga do MP – Maja Matwiejczuk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- ===== JS – BEZ ZMIAN ===== -->
 <script type="module" defer>
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -289,68 +288,40 @@ header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:18px 20px;
+  padding:12px 16px;
   background:#fff;
-  border-bottom:3px solid #000;
+  border-bottom:2px solid #000;
 }
+
+/* ===== MENU ===== */
+.menu{display:flex;align-items:center;gap:10px}
+.menu button{
+  background:none;border:none;cursor:pointer;font-size:15px
+}
+.menu button:hover{text-decoration:underline}
 
 /* ===== HERO ===== */
 .hero{
   background:#fff;
-  padding:30px 20px 10px;
   text-align:center;
+  padding:30px 10px 20px;
+  border-bottom:2px solid #000;
 }
-.hero h1{
-  margin:0;
-  font-size:36px;
-}
-.hero h2{
-  margin:6px 0 20px;
-  font-weight:normal;
-  color:#444;
-}
+.hero h1{font-size:36px;margin:0}
+.hero h2{font-size:20px;margin:6px 0 16px;font-weight:normal}
 .hero img{
-  max-width:900px;
-  width:100%;
+  max-width:700px;
+  width:90%;
   height:auto;
-  border-radius:12px;
+  opacity:.95;
 }
 
-/* ===== MENU ===== */
-.menu{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-.menu button{
-  background:none;
-  border:none;
-  cursor:pointer;
-  font-size:16px;
-}
-.menu button:hover{ text-decoration:underline; }
-
-/* ===== MENU LINKI ===== */
-.menu-links{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-left:14px;
-  padding-left:14px;
-  border-left:2px solid #ddd;
-}
-.menu-links img{
-  height:28px;
-  transition:transform .2s;
-}
-.menu-links img:hover{ transform:scale(1.15); }
-
-/* ===== LICZNIKI + LEGENDA ===== */
+/* ===== STATS + LEGENDA ===== */
 .stats{
   display:grid;
   grid-template-columns:auto 1fr auto;
   align-items:center;
-  padding:8px 14px;
+  padding:6px 10px;
   font-weight:bold;
 }
 .legend{
@@ -365,8 +336,6 @@ header{
 /* ===== KALENDARZ ===== */
 .calendar{display:grid;gap:8px;padding:10px}
 .weekday{font-weight:bold;text-align:center}
-
-/* ===== DNI ===== */
 .day{
   border:2px solid #000;
   border-radius:8px;
@@ -378,8 +347,6 @@ header{
 textarea,input{width:100%}
 .row{display:flex;gap:6px;align-items:center}
 .checks{display:flex;gap:10px;flex-wrap:wrap}
-
-/* ===== GWIAZDKI ===== */
 .star{cursor:pointer;font-size:20px}
 .star.active{
   color:gold;
@@ -398,10 +365,9 @@ textarea,input{width:100%}
 
 <header>
   <div>
-    <strong>Droga do MP</strong><br>
+    <strong>Droga do MP – Maja Matwiejczuk</strong><br>
     <span id="viewTitle"></span>
   </div>
-
   <nav class="menu">
     <button id="homeBtn">🏠</button>
     <button id="prevMonthBtn">⬅</button>
@@ -409,31 +375,23 @@ textarea,input{width:100%}
     <button id="tournamentsBtn">🏆 Turnieje</button>
     <button title="Zadania (wkrótce)">📋 Zadania</button>
     <button title="Raport (wkrótce)">📊 Raport</button>
-
-    <div class="menu-links">
-      <a href="https://szachybolszewo.pl/" target="_blank"><img src="logo.png"></a>
-      <a href="https://lichess.org/" target="_blank"><img src="lichess.png"></a>
-      <a href="https://www.chess.com/home" target="_blank"><img src="chess.png"></a>
-    </div>
   </nav>
 </header>
 
 <section class="hero">
   <h1>Droga do MP 2026</h1>
   <h2>Maja Matwiejczuk</h2>
-  <img src="image.png" alt="Droga do MP">
+  <img src="image.png" alt="Droga do MP 2026">
 </section>
 
 <div class="stats">
   <div id="starsCounter"></div>
-
   <div class="legend">
     <span><div class="box" style="background:#ffeb3b"></div> Turniej</span>
     <span><div class="box" style="background:#66bb6a"></div> Regeneracja</span>
     <span><div class="box" style="background:#e3f2fd"></div> Są gwiazdki</span>
     <span><div class="box" style="background:#ff9999"></div> Brak gwiazdek</span>
   </div>
-
   <div id="countdown"></div>
 </div>
 

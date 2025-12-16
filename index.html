@@ -293,42 +293,23 @@ header{
   border-bottom:2px solid #000;
 }
 
-/* ===== MENU (NOWE – JEDYNA ZMIANA) ===== */
-.menu{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
+/* ===== MENU ===== */
+.menu{display:flex;align-items:center;gap:10px}
 .menu button{
-  background:#fff;
-  border:2px solid #000;
-  border-radius:12px;
-  cursor:pointer;
-  font-size:16px;
-  padding:8px 12px;
-  transition:.2s;
+  background:#fff;border:2px solid #000;border-radius:12px;
+  cursor:pointer;font-size:16px;padding:8px 12px;transition:.2s;
 }
-.menu button:hover{
-  background:#000;
-  color:#fff;
-}
+.menu button:hover{background:#000;color:#fff}
 
 /* ===== MENU LINKI ===== */
 .menu-links{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-left:14px;
-  padding-left:14px;
-  border-left:2px solid #ddd;
+  display:flex;align-items:center;gap:10px;
+  margin-left:14px;padding-left:14px;border-left:2px solid #ddd;
 }
-.menu-links img{
-  height:28px;
-  transition:transform .2s;
-}
-.menu-links img:hover{ transform:scale(1.15); }
+.menu-links img{height:28px;transition:transform .2s}
+.menu-links img:hover{transform:scale(1.15)}
 
-/* ===== RESZTA – BEZ ZMIAN ===== */
+/* ===== RESZTA ===== */
 .stats{
   display:grid;
   grid-template-columns:auto 1fr auto;
@@ -336,16 +317,13 @@ header{
   padding:6px 10px;
   font-weight:bold;
 }
-.legend{
-  display:flex;
-  justify-content:center;
-  gap:14px;
-  font-size:13px;
-}
+.legend{display:flex;justify-content:center;gap:14px;font-size:13px}
 .legend span{display:flex;align-items:center;gap:6px}
 .box{width:14px;height:14px;border:2px solid #000}
 .calendar{display:grid;gap:8px;padding:10px}
 .weekday{font-weight:bold;text-align:center}
+
+/* ===== KAFELKI DNI – ZMIANA ===== */
 .day{
   border:2px solid #000;
   border-radius:8px;
@@ -353,7 +331,32 @@ header{
   display:flex;
   flex-direction:column;
   gap:6px;
+
+  height:220px;              /* ✅ STAŁA WYSOKOŚĆ */
+  box-sizing:border-box;
 }
+
+/* ===== TEXTAREA – ZMIANA ===== */
+.day textarea{
+  width:100%;
+  resize:none;
+  flex-grow:1;               /* ✅ dynamiczne wypełnienie */
+  min-height:40px;
+  overflow-y:auto;
+
+  scrollbar-width:thin;
+  scrollbar-color:#999 transparent;
+}
+
+/* Chrome / Edge / Safari */
+.day textarea::-webkit-scrollbar{width:6px}
+.day textarea::-webkit-scrollbar-thumb{
+  background:#aaa;border-radius:4px;
+}
+.day textarea::-webkit-scrollbar-track{
+  background:transparent;
+}
+
 textarea,input{width:100%}
 .row{display:flex;gap:6px;align-items:center}
 .checks{display:flex;gap:10px;flex-wrap:wrap}
@@ -366,24 +369,16 @@ textarea,input{width:100%}
 .regeneration-day{background:#66bb6a}
 .stars-day{background:#e3f2fd}
 .no-stars-day{background:#ff9999}
-  
-/* ===== MINI OBRAZEK W HEADERZE ===== */
-.header-left{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
 
+/* ===== HEADER IMAGE ===== */
+.header-left{display:flex;align-items:center;gap:12px}
 .header-image{
-  height:110px;        /* +50% */
+  height:110px;
   width:auto;
-  max-width:3000px;    /* +50% */
   object-fit:cover;
   border-radius:12px;
   border:2px solid #000;
 }
-
-  
 </style>
 </head>
 
@@ -392,7 +387,6 @@ textarea,input{width:100%}
 <header>
   <div class="header-left">
     <img src="image2.png" alt="Droga do MP" class="header-image">
-
     <div>
       <strong>Droga do MP – Maja Matwiejczuk</strong><br>
       <span id="viewTitle"></span>

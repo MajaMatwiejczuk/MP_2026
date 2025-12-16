@@ -5,17 +5,13 @@
 <title>Droga do MP – Maja Matwiejczuk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script type="module" defer>
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, doc, setDoc, getDoc,
-  collection, getDocs, addDoc, deleteDoc
+  getFirestore, doc, setDoc, getDoc, getDocs, collection
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ================= CONFIG ================= */
-const MAX_STARS = 3;
-
-/* ================= FIREBASE ================= */
+/* ===== FIREBASE ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyCnMfYLnkVcttfpjcfisGv1s-Nx-pL4jFk",
   authDomain: "maja2026-2ee26.firebaseapp.com",
@@ -24,204 +20,209 @@ const firebaseConfig = {
   messagingSenderId: "365178420968",
   appId: "1:365178420968:web:2081cdd7ae556d6eb6135d"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ================= DOM ================= */
-const calendarEl = document.getElementById("calendar");
-const viewTitleEl = document.getElementById("viewTitle");
-const starsCounterEl = document.getElementById("starsCounter");
-const countdownEl = document.getElementById("countdown");
-
-const homeBtn = document.getElementById("homeBtn");
-const prevBtn = document.getElementById("prevMonthBtn");
-const nextBtn = document.getElementById("nextMonthBtn");
-const tournamentsBtn = document.getElementById("tournamentsBtn");
-const tasksBtn = document.getElementById("tasksBtn");
-const reportBtn = document.getElementById("reportBtn");
-
-/* ================= DATES ================= */
-let currentDate = new Date();
-const calendarStart = new Date(2025,11,1);
+/* ===== DATY ===== */
 const mpStart = new Date(2026,1,28);
 const mpEnd   = new Date(2026,2,8);
 
-/* ================= HELPERS ================= */
-function debounce(fn, d=300){
-  let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),d); };
-}
-async function saveDay(key,obj){
-  await setDoc(doc(db,"calendar",key),obj,{merge:true});
-}
-async function loadDay(key){
-  const s = await getDoc(doc(db,"calendar",key));
+/* ===== TURNIEJE ===== */
+const tournaments = [
+  { name:"Końcówka Roku – Malbork", start:"2025-12-28", end:"2025-12-29" },
+  { name:"Mistrzostwa Polski", start:"2026-02-28", end:"2026-03-08" }
+];
+
+/* ===== DOM ===== */
+const cal = document.getElementById("calendar");
+const titleEl = document.getElementById("title");
+const starsEl = document.getElementById("starsCounter");
+const daysEl = document.getElementById("daysCounter");
+
+/* ===== HELPERS ===== */
+const iso = d => d.toISOString().slice(0,10);
+const debounce = (f,t=400)=>{let x;return(...a)=>{clearTimeout(x);x=setTimeout(()=>f(...a),t)}};
+
+async function loadDay(k){
+  const s = await getDoc(doc(db,"calendar",k));
   return s.exists()?s.data():{};
 }
-
-/* ================= TURNIEJE ================= */
-async function loadTournaments(){
-  const snap = await getDocs(collection(db,"tournaments"));
-  return snap.docs.map(d=>({id:d.id,...d.data()}));
+async function saveDay(k,o){
+  await setDoc(doc(db,"calendar",k),o,{merge:true});
 }
-function tournamentForDay(date,tournaments){
-  return tournaments.find(t=>{
-    const start = new Date(t.start+"T00:00:00");
-    const end   = new Date(t.end+"T23:59:59");
-    return date>=start && date<=end;
+
+/* ===== LICZNIKI ===== */
+async function updateCounters(){
+  const docs = await getDocs(collection(db,"calendar"));
+  let stars=0;
+  docs.forEach(d=>stars+=d.data().stars||0);
+
+  const totalDays = Math.floor((mpEnd - new Date(2025,11,1))/(86400000))+1;
+  starsEl.innerHTML = `⭐ <b>${stars}</b> / ${totalDays*3}`;
+
+  const diff = Math.ceil((mpStart-new Date())/86400000);
+  daysEl.innerHTML = `🏆 <b>${diff}</b> dni do MP`;
+}
+
+/* ===== GWIAZDKI ===== */
+function renderStars(k,data,el){
+  const wrap=document.createElement("div");
+  wrap.className="stars";
+  for(let i=1;i<=3;i++){
+    const s=document.createElement("span");
+    s.textContent = data.stars>=i?"★":"☆";
+    s.onclick=async()=>{
+      data.stars = data.stars===i?0:i;
+      await saveDay(k,{stars:data.stars});
+      s.parentNode.querySelectorAll("span").forEach((x,j)=>{
+        x.textContent = data.stars>=j+1?"★":"☆";
+      });
+      updateCounters();
+      applyColors(el,data);
+    };
+    wrap.appendChild(s);
+  }
+  el.appendChild(wrap);
+}
+
+/* ===== CHECKLISTA ===== */
+function renderChecklist(k,data,el){
+  const list=document.createElement("div");
+  list.className="checks";
+  const map={trening:"🎯",turniej:"🏆",analiza:"🧠",regeneracja:"😴"};
+  Object.keys(map).forEach(f=>{
+    const l=document.createElement("label");
+    const c=document.createElement("input");
+    c.type="checkbox"; c.checked=data[f]||false;
+    c.onchange=async()=>{
+      await saveDay(k,{[f]:c.checked});
+      if(f==="regeneracja") applyColors(el,{...data,[f]:c.checked});
+    };
+    l.append(c,map[f]);
+    list.appendChild(l);
   });
+  el.appendChild(list);
 }
 
-/* ================= KOLORY ================= */
-function applyDayColors(el,data,isTournament){
-  el.classList.remove("tournament","regeneration-day","stars-day","no-stars-day");
-  if(isTournament) el.classList.add("tournament");
-  else if(data.regeneracja) el.classList.add("regeneration-day");
-  else if((data.stars||0)>0) el.classList.add("stars-day");
-  else el.classList.add("no-stars-day");
+/* ===== KOLORY ===== */
+function applyColors(el,data){
+  el.classList.remove("no-stars","has-stars","regen","tournament");
+  if(data.stars>0) el.classList.add("has-stars");
+  else el.classList.add("no-stars");
+  if(data.regeneracja) el.classList.add("regen");
+  if(data.tournamentName) el.classList.add("tournament");
 }
 
-/* ================= WIDOKI MENU ================= */
-function renderTasks(){
-  calendarEl.innerHTML = `
-    <div class="day">
-      <h3>📝 Zadania</h3>
-      <p>Tu wkrótce pojawi się lista zadań treningowych od trenera.</p>
-    </div>
+/* ===== MIESIĄC ===== */
+async function renderMonth(date=new Date()){
+  cal.innerHTML="";
+  cal.className="month";
+  titleEl.innerHTML=`Maja Matwiejczuk <img src="logo.png"> – ${date.toLocaleDateString("pl-PL",{month:"long",year:"numeric"})}`;
+
+  const y=date.getFullYear(), m=date.getMonth();
+  const days=new Date(y,m+1,0).getDate();
+  for(let d=1;d<=days;d++){
+    const day=new Date(y,m,d);
+    const k=iso(day);
+    const data=await loadDay(k);
+
+    tournaments.forEach(t=>{
+      if(k>=t.start && k<=t.end){
+        data.tournamentName=t.name;
+        data.turniej=true;
+      }
+    });
+
+    const el=document.createElement("div");
+    el.className="day";
+    el.innerHTML=`<b>${d}</b>
+      ${data.tournamentName?`<div class="tname">${data.tournamentName}</div>`:""}
+      <textarea rows="2">${data.text||""}</textarea>`;
+
+    el.ondblclick=()=>renderDay(day);
+
+    const ta=el.querySelector("textarea");
+    ta.oninput=debounce(()=>saveDay(k,{text:ta.value}));
+
+    renderStars(k,data,el);
+    renderChecklist(k,data,el);
+    applyColors(el,data);
+
+    cal.appendChild(el);
+  }
+  updateCounters();
+}
+
+/* ===== DZIEŃ ===== */
+async function renderDay(date){
+  cal.innerHTML="";
+  cal.className="dayview";
+  const k=iso(date);
+  const data=await loadDay(k);
+
+  titleEl.textContent=`Maja Matwiejczuk – ${date.toLocaleDateString("pl-PL",{weekday:"long",day:"numeric",month:"long"})}`;
+
+  const el=document.createElement("div");
+  el.className="day big";
+  el.innerHTML=`
+    <textarea rows="4">${data.text||""}</textarea>
+    <input placeholder="Link Lichess" value="${data.link||""}">
   `;
-  viewTitleEl.textContent = "Zadania";
+
+  el.querySelector("textarea").oninput=debounce(e=>saveDay(k,{text:e.target.value}));
+  el.querySelector("input").oninput=debounce(e=>saveDay(k,{link:e.target.value}));
+
+  renderStars(k,data,el);
+  renderChecklist(k,data,el);
+  applyColors(el,data);
+
+  cal.appendChild(el);
 }
 
-function renderReport(){
-  calendarEl.innerHTML = `
-    <div class="day">
-      <h3>📊 Raport</h3>
-      <p>Tu będzie raport postępów, gwiazdek i turniejów.</p>
-    </div>
-  `;
-  viewTitleEl.textContent = "Raport";
-}
-
-/* ================= LICZNIKI ================= */
-async function updateStarsCounter(){
-  let earned=0;
-  const snap=await getDocs(collection(db,"calendar"));
-  snap.forEach(d=>{
-    const [y,m,dd]=d.id.split("-").map(Number);
-    const date=new Date(y,m-1,dd);
-    if(date<=mpEnd) earned+=d.data().stars||0;
-  });
-  const total=Math.floor((mpEnd-calendarStart)/(1000*60*60*24))+1;
-  starsCounterEl.innerHTML=`⭐ <span>${earned}</span> / ${total*MAX_STARS}`;
-}
-function updateCountdown(){
-  const diff=Math.ceil((mpStart-new Date())/(1000*60*60*24));
-  countdownEl.innerHTML=`🏆 <span>${diff}</span> dni do MP`;
-}
-
-/* ================= KALENDARZ (jak wcześniej – skrócone) ================= */
-async function renderMonth(){
-  calendarEl.innerHTML = `<div class="day">📅 Kalendarz działa jak wcześniej</div>`;
-  viewTitleEl.textContent = "Kalendarz";
-}
-
-/* ================= NAV ================= */
-homeBtn.onclick = renderMonth;
-tasksBtn.onclick = renderTasks;
-reportBtn.onclick = renderReport;
-tournamentsBtn.onclick = () => alert("Widok turniejów – już masz 😉");
-
-prevBtn.onclick=()=>{currentDate.setMonth(currentDate.getMonth()-1);renderMonth();};
-nextBtn.onclick=()=>{currentDate.setMonth(currentDate.getMonth()+1);renderMonth();};
-
-/* ================= START ================= */
-(async()=>{
-  updateCountdown();
-  await updateStarsCounter();
-  renderMonth();
-})();
+/* ===== START ===== */
+window.onload=()=>renderMonth();
 </script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f4f4f4}
-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:10px;
-  background:#fff;
-  border-bottom:2px solid #000
-}
-.menu-left button,
-.menu-right a{
-  margin-right:6px;
-  text-decoration:none;
-  background:none;
-  border:none;
-  cursor:pointer;
-  font-size:16px;
-}
-.menu-right img{
-  height:28px;
-  vertical-align:middle;
-  transition:transform .2s;
-}
-.menu-right img:hover{
-  transform:scale(1.15);
-}
-.stats-bar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:8px 12px;
-  font-weight:bold
-}
-.counter span{font-size:26px;font-weight:900}
-.calendar{padding:10px}
-.day{
-  background:#fff;
-  border:2px solid #000;
-  border-radius:8px;
-  padding:12px
-}
+body{font-family:Arial;background:#f4f4f4;margin:0}
+header{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:2px solid #000}
+header img{height:28px;margin-left:8px}
+.menu button{margin:0 4px}
+.counters{display:flex;justify-content:space-between;padding:8px;font-size:22px}
+.legend{text-align:center;font-size:14px}
+.calendar.month{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:10px}
+.day{background:#fff;border:2px solid #000;border-radius:10px;padding:6px}
+.day textarea{width:100%}
+.stars span{font-size:22px;cursor:pointer;margin-right:2px}
+.has-stars{background:#dff4ff}
+.no-stars{background:#ffd6d6}
+.regen{background:#6bd36b}
+.tournament{background:#ffe066}
+.tname{font-weight:bold}
+.checks label{margin-right:6px}
+.dayview{padding:10px}
+.big textarea{width:100%}
 </style>
 </head>
 
 <body>
-
 <header>
-  <div>
-    <strong>Droga do MP – Maja Matwiejczuk</strong><br>
-    <span id="viewTitle"></span>
-  </div>
-
-  <div class="menu-left">
-    <button id="homeBtn">🏠</button>
-    <button id="tasksBtn">📝 Zadania</button>
-    <button id="reportBtn">📊 Raport</button>
-    <button id="tournamentsBtn">🏆 Turnieje</button>
-    <button id="prevMonthBtn">⬅</button>
-    <button id="nextMonthBtn">➡</button>
-  </div>
-
-  <div class="menu-right">
-    <a href="https://szachybolszewo.pl/" target="_blank">
-      <img src="logo.png" alt="KSz Bolszewo">
-    </a>
-    <a href="https://lichess.org/" target="_blank">
-      <img src="lichess.png" alt="Lichess">
-    </a>
-    <a href="https://www.chess.com/home" target="_blank">
-      <img src="chess.png" alt="Chess.com">
-    </a>
+  <h1 id="title">Droga do MP – Maja Matwiejczuk</h1>
+  <div class="menu">
+    <button onclick="renderMonth()">🏠</button>
+    <button>📋 Zadania</button>
+    <button>📊 Raport</button>
+    <button>🏆 Turnieje</button>
   </div>
 </header>
 
-<div class="stats-bar">
-  <div id="starsCounter" class="counter"></div>
-  <div id="countdown" class="counter"></div>
+<div class="counters">
+  <div id="starsCounter"></div>
+  <div class="legend">🔴 brak ⭐ | 🔵 trening | 🟢 regeneracja | 🟡 turniej</div>
+  <div id="daysCounter"></div>
 </div>
 
-<main id="calendar" class="calendar"></main>
-
+<main id="calendar"></main>
 </body>
 </html>

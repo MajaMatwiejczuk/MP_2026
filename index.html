@@ -296,18 +296,42 @@ header{
 /* ===== MENU ===== */
 .menu{display:flex;align-items:center;gap:10px}
 .menu button{
-  background:#fff;border:2px solid #000;border-radius:12px;
-  cursor:pointer;font-size:16px;padding:8px 12px;transition:.2s;
+  background:#fff;
+  border:3px solid #000;     /* ⬅️ grubsza linia */
+  border-radius:16px;       /* ⬅️ bardziej „kafelkowe” */
+  cursor:pointer;
+
+  font-size:18px;           /* ⬅️ większe ikony/tekst */
+  padding:10px 16px;        /* ⬅️ większy hit-area */
+
+  font-weight:bold;
+  transition:background .2s, transform .1s;
 }
-.menu button:hover{background:#000;color:#fff}
+.menu button:hover{
+  background:#000;
+  color:#fff;
+  transform:translateY(-1px);
+}
+
+#prevMonthBtn,
+#nextMonthBtn{
+  font-size:20px;
+  padding:10px 14px;
+}
 
 /* ===== MENU LINKI ===== */
 .menu-links{
   display:flex;align-items:center;gap:10px;
   margin-left:14px;padding-left:14px;border-left:2px solid #ddd;
 }
-.menu-links img{height:28px;transition:transform .2s}
-.menu-links img:hover{transform:scale(1.15)}
+.menu-links img{
+  height:38px;              /* ⬅️ było 28px */
+  width:auto;
+  transition:transform .2s;
+}
+.menu-links img:hover{
+  transform:scale(1.2);
+}
 
 /* ===== RESZTA ===== */
 .stats{
@@ -332,7 +356,7 @@ header{
   flex-direction:column;
   gap:6px;
 
-  height:220px;              /* ✅ STAŁA WYSOKOŚĆ */
+  height:190px;              /* ✅ STAŁA WYSOKOŚĆ */
   box-sizing:border-box;
 }
 
@@ -373,11 +397,11 @@ textarea,input{width:100%}
 /* ===== HEADER IMAGE ===== */
 .header-left{display:flex;align-items:center;gap:12px}
 .header-image{
-  height:110px;
+  height:200px;
   width:auto;
   object-fit:cover;
-  border-radius:12px;
-  border:2px solid #000;
+  border-radius:22px;
+  border:none; 
 }
 </style>
 </head>

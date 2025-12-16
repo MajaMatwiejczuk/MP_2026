@@ -366,15 +366,37 @@ textarea,input{width:100%}
 .regeneration-day{background:#66bb6a}
 .stars-day{background:#e3f2fd}
 .no-stars-day{background:#ff9999}
+  
+/* ===== MINI OBRAZEK W HEADERZE ===== */
+.header-left{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.header-image{
+  height:60px;        /* niski */
+  width:auto;         /* proporcje */
+  max-width:180px;    /* ~6:2 */
+  object-fit:cover;
+  border-radius:10px;
+  border:2px solid #000;
+}
+
+  
 </style>
 </head>
 
 <body>
 
 <header>
-  <div>
-    <strong>Droga do MP – Maja Matwiejczuk</strong><br>
-    <span id="viewTitle"></span>
+  <div class="header-left">
+    <img src="image2.png" alt="Droga do MP" class="header-image">
+
+    <div>
+      <strong>Droga do MP – Maja Matwiejczuk</strong><br>
+      <span id="viewTitle"></span>
+    </div>
   </div>
 
   <nav class="menu">

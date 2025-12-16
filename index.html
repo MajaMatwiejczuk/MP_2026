@@ -324,8 +324,14 @@ header{
   display:flex;align-items:center;gap:10px;
   margin-left:14px;padding-left:14px;border-left:2px solid #ddd;
 }
-.menu-links img{height:28px;transition:transform .2s}
-.menu-links img:hover{transform:scale(1.15)}
+.menu-links img{
+  height:38px;              /* ⬅️ było 28px */
+  width:auto;
+  transition:transform .2s;
+}
+.menu-links img:hover{
+  transform:scale(1.2);
+}
 
 /* ===== RESZTA ===== */
 .stats{

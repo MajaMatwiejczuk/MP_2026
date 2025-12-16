@@ -338,21 +338,34 @@ textarea,input{width:100%}
 <body>
 
 <header>
-  <div class="topbar">
-    <div><strong>Droga do MP</strong></div>
-    <nav class="menu">
-      <button id="homeBtn">🏠</button>
-      <button id="prevMonthBtn">⬅</button>
-      <button id="nextMonthBtn">➡</button>
-    </nav>
+  <div>
+    <strong>Droga do MP – Maja Matwiejczuk</strong><br>
+    <!-- TO JEST KLUCZOWE -->
+    <span id="viewTitle"></span>
   </div>
 
-  <div class="banner">
-    <h1>Droga do MP 2026</h1>
-    <h2>Maja Matwiejczuk</h2>
-    <img src="image.png" alt="Droga do MP">
-  </div>
+  <nav class="menu">
+    <button id="homeBtn">🏠</button>
+    <button id="prevMonthBtn">⬅</button>
+    <button id="nextMonthBtn">➡</button>
+    <button id="tournamentsBtn">🏆 Turnieje</button>
+    <button id="tasksBtn">📋 Zadania</button>
+    <button id="reportBtn">📊 Raport</button>
+
+    <div class="menu-links">
+      <a href="https://szachybolszewo.pl/" target="_blank">
+        <img src="logo.png" alt="Klub">
+      </a>
+      <a href="https://lichess.org/" target="_blank">
+        <img src="lichess.png" alt="Lichess">
+      </a>
+      <a href="https://www.chess.com/home" target="_blank">
+        <img src="chess.png" alt="Chess.com">
+      </a>
+    </div>
+  </nav>
 </header>
+
 
 <div class="stats">
   <div id="starsCounter"></div>

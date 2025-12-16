@@ -296,10 +296,28 @@ header{
 /* ===== MENU ===== */
 .menu{display:flex;align-items:center;gap:10px}
 .menu button{
-  background:#fff;border:2px solid #000;border-radius:12px;
-  cursor:pointer;font-size:16px;padding:8px 12px;transition:.2s;
+  background:#fff;
+  border:3px solid #000;     /* ⬅️ grubsza linia */
+  border-radius:16px;       /* ⬅️ bardziej „kafelkowe” */
+  cursor:pointer;
+
+  font-size:18px;           /* ⬅️ większe ikony/tekst */
+  padding:10px 16px;        /* ⬅️ większy hit-area */
+
+  font-weight:bold;
+  transition:background .2s, transform .1s;
 }
-.menu button:hover{background:#000;color:#fff}
+.menu button:hover{
+  background:#000;
+  color:#fff;
+  transform:translateY(-1px);
+}
+
+  #prevMonthBtn,
+#nextMonthBtn{
+  font-size:20px;
+  padding:10px 14px;
+}
 
 /* ===== MENU LINKI ===== */
 .menu-links{
@@ -373,7 +391,7 @@ textarea,input{width:100%}
 /* ===== HEADER IMAGE ===== */
 .header-left{display:flex;align-items:center;gap:12px}
 .header-image{
-  height:130px;
+  height:150px;
   width:auto;
   object-fit:cover;
   border-radius:18px;

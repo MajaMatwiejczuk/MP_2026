@@ -284,19 +284,29 @@ tournamentsBtn.onclick=renderTournaments;
 body{margin:0;font-family:Arial;background:#f4f4f4}
 header{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#fff;border-bottom:2px solid #000}
 .menu button{margin-left:6px}
-.stats{display:flex;justify-content:space-between;padding:6px 10px;font-weight:bold}
+
+/* ===== LICZNIKI + LEGENDA ===== */
+.stats{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  padding:6px 10px;
+  font-weight:bold;
+}
 .legend{
   display:flex;
+  justify-content:center;
   gap:14px;
-  padding:6px 10px;
   font-size:13px;
 }
 .legend span{display:flex;align-items:center;gap:6px}
 .box{width:14px;height:14px;border:2px solid #000}
 
+/* ===== KALENDARZ ===== */
 .calendar{display:grid;gap:8px;padding:10px}
 .weekday{font-weight:bold;text-align:center}
 
+/* ===== DNI ===== */
 .day{
   border:2px solid #000;
   border-radius:8px;
@@ -305,24 +315,18 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
   flex-direction:column;
   gap:6px;
 }
-
 textarea,input{width:100%}
 .row{display:flex;gap:6px;align-items:center}
 .checks{display:flex;gap:10px;flex-wrap:wrap}
 
-.star{
-  cursor:pointer;
-  font-size:20px;
-}
+/* ===== GWIAZDKI ===== */
+.star{cursor:pointer;font-size:20px}
 .star.active{
   color:gold;
-  text-shadow:
-    -1px -1px 0 #000,
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000;
+  text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;
 }
 
+/* ===== KOLORY DNI ===== */
 .tournament{background:#ffeb3b}
 .regeneration-day{background:#66bb6a}
 .stars-day{background:#e3f2fd}
@@ -346,14 +350,15 @@ textarea,input{width:100%}
 
 <div class="stats">
   <div id="starsCounter"></div>
-  <div id="countdown"></div>
-</div>
 
-<div class="legend">
-  <span><div class="box" style="background:#ffeb3b"></div> Turniej</span>
-  <span><div class="box" style="background:#66bb6a"></div> Regeneracja</span>
-  <span><div class="box" style="background:#e3f2fd"></div> Są gwiazdki</span>
-  <span><div class="box" style="background:#ff9999"></div> Brak gwiazdek</span>
+  <div class="legend">
+    <span><div class="box" style="background:#ffeb3b"></div> Turniej</span>
+    <span><div class="box" style="background:#66bb6a"></div> Regeneracja</span>
+    <span><div class="box" style="background:#e3f2fd"></div> Są gwiazdki</span>
+    <span><div class="box" style="background:#ff9999"></div> Brak gwiazdek</span>
+  </div>
+
+  <div id="countdown"></div>
 </div>
 
 <main id="calendar" class="calendar"></main>

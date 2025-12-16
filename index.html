@@ -7,11 +7,10 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, doc, setDoc, getDoc, getDocs, collection
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ===== FIREBASE ===== */
+/* ================= FIREBASE ================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCnMfYLnkVcttfpjcfisGv1s-Nx-pL4jFk",
   authDomain: "maja2026-2ee26.firebaseapp.com",
@@ -20,27 +19,26 @@ const firebaseConfig = {
   messagingSenderId: "365178420968",
   appId: "1:365178420968:web:2081cdd7ae556d6eb6135d"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ===== DATY ===== */
+/* ================= DATY ================= */
 const mpStart = new Date(2026,1,28);
 const mpEnd   = new Date(2026,2,8);
 
-/* ===== TURNIEJE ===== */
+/* ================= TURNIEJE ================= */
 const tournaments = [
   { name:"Końcówka Roku – Malbork", start:"2025-12-28", end:"2025-12-29" },
   { name:"Mistrzostwa Polski", start:"2026-02-28", end:"2026-03-08" }
 ];
 
-/* ===== DOM ===== */
+/* ================= DOM ================= */
 const cal = document.getElementById("calendar");
 const titleEl = document.getElementById("title");
 const starsEl = document.getElementById("starsCounter");
 const daysEl = document.getElementById("daysCounter");
 
-/* ===== HELPERS ===== */
+/* ================= HELPERS ================= */
 const iso = d => d.toISOString().slice(0,10);
 const debounce = (f,t=400)=>{let x;return(...a)=>{clearTimeout(x);x=setTimeout(()=>f(...a),t)}};
 
@@ -52,20 +50,20 @@ async function saveDay(k,o){
   await setDoc(doc(db,"calendar",k),o,{merge:true});
 }
 
-/* ===== LICZNIKI ===== */
+/* ================= LICZNIKI ================= */
 async function updateCounters(){
   const docs = await getDocs(collection(db,"calendar"));
   let stars=0;
   docs.forEach(d=>stars+=d.data().stars||0);
 
-  const totalDays = Math.floor((mpEnd - new Date(2025,11,1))/(86400000))+1;
+  const totalDays = Math.floor((mpEnd - new Date(2025,11,1))/86400000)+1;
   starsEl.innerHTML = `⭐ <b>${stars}</b> / ${totalDays*3}`;
 
   const diff = Math.ceil((mpStart-new Date())/86400000);
   daysEl.innerHTML = `🏆 <b>${diff}</b> dni do MP`;
 }
 
-/* ===== GWIAZDKI ===== */
+/* ================= GWIAZDKI ================= */
 function renderStars(k,data,el){
   const wrap=document.createElement("div");
   wrap.className="stars";
@@ -75,18 +73,18 @@ function renderStars(k,data,el){
     s.onclick=async()=>{
       data.stars = data.stars===i?0:i;
       await saveDay(k,{stars:data.stars});
-      s.parentNode.querySelectorAll("span").forEach((x,j)=>{
+      wrap.querySelectorAll("span").forEach((x,j)=>{
         x.textContent = data.stars>=j+1?"★":"☆";
       });
-      updateCounters();
       applyColors(el,data);
+      updateCounters();
     };
     wrap.appendChild(s);
   }
   el.appendChild(wrap);
 }
 
-/* ===== CHECKLISTA ===== */
+/* ================= CHECKLISTA ================= */
 function renderChecklist(k,data,el){
   const list=document.createElement("div");
   list.className="checks";
@@ -94,7 +92,8 @@ function renderChecklist(k,data,el){
   Object.keys(map).forEach(f=>{
     const l=document.createElement("label");
     const c=document.createElement("input");
-    c.type="checkbox"; c.checked=data[f]||false;
+    c.type="checkbox";
+    c.checked=data[f]||false;
     c.onchange=async()=>{
       await saveDay(k,{[f]:c.checked});
       if(f==="regeneracja") applyColors(el,{...data,[f]:c.checked});
@@ -105,7 +104,7 @@ function renderChecklist(k,data,el){
   el.appendChild(list);
 }
 
-/* ===== KOLORY ===== */
+/* ================= KOLORY ================= */
 function applyColors(el,data){
   el.classList.remove("no-stars","has-stars","regen","tournament");
   if(data.stars>0) el.classList.add("has-stars");
@@ -114,14 +113,16 @@ function applyColors(el,data){
   if(data.tournamentName) el.classList.add("tournament");
 }
 
-/* ===== MIESIĄC ===== */
+/* ================= MIESIĄC ================= */
 async function renderMonth(date=new Date()){
   cal.innerHTML="";
   cal.className="month";
+
   titleEl.innerHTML=`Maja Matwiejczuk <img src="logo.png"> – ${date.toLocaleDateString("pl-PL",{month:"long",year:"numeric"})}`;
 
   const y=date.getFullYear(), m=date.getMonth();
   const days=new Date(y,m+1,0).getDate();
+
   for(let d=1;d<=days;d++){
     const day=new Date(y,m,d);
     const k=iso(day);
@@ -136,9 +137,11 @@ async function renderMonth(date=new Date()){
 
     const el=document.createElement("div");
     el.className="day";
-    el.innerHTML=`<b>${d}</b>
+    el.innerHTML=`
+      <div class="num">${d}</div>
       ${data.tournamentName?`<div class="tname">${data.tournamentName}</div>`:""}
-      <textarea rows="2">${data.text||""}</textarea>`;
+      <textarea rows="2">${data.text||""}</textarea>
+    `;
 
     el.ondblclick=()=>renderDay(day);
 
@@ -154,7 +157,7 @@ async function renderMonth(date=new Date()){
   updateCounters();
 }
 
-/* ===== DZIEŃ ===== */
+/* ================= DZIEŃ ================= */
 async function renderDay(date){
   cal.innerHTML="";
   cal.className="dayview";
@@ -180,28 +183,60 @@ async function renderDay(date){
   cal.appendChild(el);
 }
 
-/* ===== START ===== */
+/* ================= START ================= */
 window.onload=()=>renderMonth();
 </script>
 
 <style>
 body{font-family:Arial;background:#f4f4f4;margin:0}
-header{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:2px solid #000}
+
+/* ===== HEADER ===== */
+header{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:3px solid #000}
 header img{height:28px;margin-left:8px}
-.menu button{margin:0 4px}
-.counters{display:flex;justify-content:space-between;padding:8px;font-size:22px}
+.menu button{margin:0 4px;font-size:14px}
+
+/* ===== LICZNIKI ===== */
+.counters{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  padding:8px;
+  font-size:22px;
+}
 .legend{text-align:center;font-size:14px}
-.calendar.month{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:10px}
-.day{background:#fff;border:2px solid #000;border-radius:10px;padding:6px}
-.day textarea{width:100%}
-.stars span{font-size:22px;cursor:pointer;margin-right:2px}
+
+/* ===== KALENDARZ ===== */
+#calendar{
+  display:grid;
+  gap:10px;
+  padding:12px;
+}
+#calendar.month{
+  grid-template-columns:repeat(7,1fr);
+}
+#calendar.dayview{
+  grid-template-columns:1fr;
+}
+
+/* ===== DNI ===== */
+.day{
+  border:3px solid #000;
+  border-radius:12px;
+  padding:6px;
+}
+.num{font-weight:bold}
+.day textarea{width:100%;resize:vertical}
+
+/* ===== STANY ===== */
+.no-stars{background:#ffcccc}
 .has-stars{background:#dff4ff}
-.no-stars{background:#ffd6d6}
-.regen{background:#6bd36b}
-.tournament{background:#ffe066}
-.tname{font-weight:bold}
-.checks label{margin-right:6px}
-.dayview{padding:10px}
+.regen{background:#6fdc6f}
+.tournament{background:#ffd84d}
+
+/* ===== ELEMENTY ===== */
+.tname{font-weight:bold;margin-bottom:4px}
+.stars span{font-size:22px;cursor:pointer;margin-right:2px}
+.checks label{margin-right:6px;font-size:14px}
 .big textarea{width:100%}
 </style>
 </head>
@@ -219,7 +254,7 @@ header img{height:28px;margin-left:8px}
 
 <div class="counters">
   <div id="starsCounter"></div>
-  <div class="legend">🔴 brak ⭐ | 🔵 trening | 🟢 regeneracja | 🟡 turniej</div>
+  <div class="legend">🔴 brak ⭐ | 🔵 gwiazdki | 🟢 regeneracja | 🟡 turniej</div>
   <div id="daysCounter"></div>
 </div>
 

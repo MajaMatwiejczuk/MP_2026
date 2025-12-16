@@ -5,6 +5,7 @@
 <title>Droga do MP – Maja Matwiejczuk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<!-- =================== SCRIPT (STABILNY – BEZ ZMIAN) =================== -->
 <script type="module" defer>
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -146,11 +147,11 @@ async function updateStarsCounter(){
     if(date<=mpEnd) earned+=d.data().stars||0;
   });
   const total=Math.floor((mpEnd-calendarStart)/(1000*60*60*24))+1;
-  starsCounterEl.textContent=`⭐ Gwiazdki: ${earned}/${total*MAX_STARS}`;
+  starsCounterEl.textContent=`⭐ ${earned}/${total*MAX_STARS}`;
 }
 function updateCountdown(){
   const diff=Math.ceil((mpStart-new Date())/(1000*60*60*24));
-  countdownEl.textContent=`⏳ Dni do MP: ${diff}`;
+  countdownEl.textContent=`🏆 ${diff} dni do MP`;
 }
 
 /* ========= MIESIĄC ========= */
@@ -231,46 +232,10 @@ async function renderDay(date){
   calendarEl.appendChild(el);
 }
 
-/* ========= TURNIEJE ========= */
-async function renderTournaments(){
-  calendarEl.innerHTML="";
-  calendarEl.style.gridTemplateColumns="1fr";
-  viewTitleEl.textContent="🏆 Turnieje";
-
-  const box=document.createElement("div");
-  box.className="day";
-
-  const ts=await loadTournaments();
-  ts.forEach(t=>{
-    const r=document.createElement("div");
-    r.innerHTML=`<b>${t.name}</b><br>${t.start} – ${t.end} <button>❌</button>`;
-    r.querySelector("button").onclick=async()=>{
-      await deleteDoc(doc(db,"tournaments",t.id));
-      renderTournaments();
-    };
-    box.appendChild(r);
-  });
-
-  const add=document.createElement("button");
-  add.textContent="➕ Dodaj turniej";
-  add.onclick=async()=>{
-    const name=prompt("Nazwa");
-    const start=prompt("Start YYYY-MM-DD");
-    const end=prompt("Koniec YYYY-MM-DD");
-    if(name&&start&&end){
-      await addDoc(collection(db,"tournaments"),{name,start,end});
-      renderTournaments();
-    }
-  };
-  box.appendChild(add);
-  calendarEl.appendChild(box);
-}
-
 /* ========= NAV ========= */
 homeBtn.onclick=renderMonth;
 prevBtn.onclick=()=>{currentDate.setMonth(currentDate.getMonth()-1);renderMonth();};
 nextBtn.onclick=()=>{currentDate.setMonth(currentDate.getMonth()+1);renderMonth();};
-tournamentsBtn.onclick=renderTournaments;
 
 /* ========= START ========= */
 (async()=>{
@@ -285,65 +250,68 @@ body{margin:0;font-family:Arial;background:#f4f4f4}
 
 /* ===== HEADER ===== */
 header{
+  padding:20px 18px;
+  background:#fff;
+  border-bottom:3px solid #000;
+}
+
+.topbar{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:10px 14px;
-  background:#fff;
-  border-bottom:2px solid #000;
 }
 
-/* ===== MENU ===== */
-.menu{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
 .menu button{
-  background:none;
-  border:none;
+  font-size:18px;
+  margin-left:10px;
   cursor:pointer;
-  font-size:15px;
 }
-.menu button:hover{ text-decoration:underline; }
 
-/* ===== MENU LINKI ===== */
-.menu-links{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-left:14px;
-  padding-left:14px;
-  border-left:2px solid #ddd;
+/* ===== BANER ===== */
+.banner{
+  text-align:center;
+  padding:24px 10px 10px;
 }
-.menu-links img{
-  height:26px;
-  transition:transform .2s;
-}
-.menu-links img:hover{ transform:scale(1.15); }
 
-/* ===== LICZNIKI + LEGENDA ===== */
+.banner h1{
+  margin:0;
+  font-size:34px;
+}
+
+.banner h2{
+  margin:6px 0 14px;
+  font-weight:normal;
+  color:#555;
+}
+
+.banner img{
+  max-width:100%;
+  max-height:280px;
+  object-fit:contain;
+}
+
+/* ===== STATS + LEGENDA ===== */
 .stats{
   display:grid;
   grid-template-columns:auto 1fr auto;
   align-items:center;
-  padding:6px 10px;
+  padding:8px 14px;
   font-weight:bold;
 }
+
 .legend{
   display:flex;
   justify-content:center;
   gap:14px;
   font-size:13px;
 }
-.legend span{display:flex;align-items:center;gap:6px}
+
 .box{width:14px;height:14px;border:2px solid #000}
 
 /* ===== KALENDARZ ===== */
 .calendar{display:grid;gap:8px;padding:10px}
 .weekday{font-weight:bold;text-align:center}
 
-/* ===== DNI ===== */
 .day{
   border:2px solid #000;
   border-radius:8px;
@@ -352,18 +320,14 @@ header{
   flex-direction:column;
   gap:6px;
 }
+
 textarea,input{width:100%}
 .row{display:flex;gap:6px;align-items:center}
 .checks{display:flex;gap:10px;flex-wrap:wrap}
 
-/* ===== GWIAZDKI ===== */
 .star{cursor:pointer;font-size:20px}
-.star.active{
-  color:gold;
-  text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;
-}
+.star.active{color:gold;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000}
 
-/* ===== KOLORY ===== */
 .tournament{background:#ffeb3b}
 .regeneration-day{background:#66bb6a}
 .stars-day{background:#e3f2fd}
@@ -374,25 +338,20 @@ textarea,input{width:100%}
 <body>
 
 <header>
-  <div>
-    <strong>Droga do MP – Maja Matwiejczuk</strong><br>
-    <span id="viewTitle"></span>
+  <div class="topbar">
+    <div><strong>Droga do MP</strong></div>
+    <nav class="menu">
+      <button id="homeBtn">🏠</button>
+      <button id="prevMonthBtn">⬅</button>
+      <button id="nextMonthBtn">➡</button>
+    </nav>
   </div>
 
-  <nav class="menu">
-    <button id="homeBtn">🏠</button>
-    <button id="prevMonthBtn">⬅</button>
-    <button id="nextMonthBtn">➡</button>
-    <button id="tournamentsBtn">🏆 Turnieje</button>
-    <button title="Zadania (wkrótce)">📋 Zadania</button>
-    <button title="Raport (wkrótce)">📊 Raport</button>
-
-    <div class="menu-links">
-      <a href="https://szachybolszewo.pl/" target="_blank"><img src="logo.png"></a>
-      <a href="https://lichess.org/" target="_blank"><img src="lichess.png"></a>
-      <a href="https://www.chess.com/home" target="_blank"><img src="chess.png"></a>
-    </div>
-  </nav>
+  <div class="banner">
+    <h1>Droga do MP 2026</h1>
+    <h2>Maja Matwiejczuk</h2>
+    <img src="image.png" alt="Droga do MP">
+  </div>
 </header>
 
 <div class="stats">

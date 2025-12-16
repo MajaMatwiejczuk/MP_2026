@@ -37,7 +37,6 @@ const homeBtn = document.getElementById("homeBtn");
 const prevBtn = document.getElementById("prevMonthBtn");
 const nextBtn = document.getElementById("nextMonthBtn");
 const tournamentsBtn = document.getElementById("tournamentsBtn");
-const tasksBtn = document.getElementById("tasksBtn");
 
 /* ========= DATES ========= */
 let currentDate = new Date();
@@ -70,12 +69,6 @@ function tournamentForDay(date,tournaments){
   });
 }
 
-/* ========= ZADANIA ========= */
-async function loadTasks(){
-  const snap = await getDocs(collection(db,"tasks"));
-  return snap.docs.map(d=>({id:d.id,...d.data()}));
-}
-
 /* ========= KOLORY ========= */
 function applyDayColors(el,data,isTournament){
   el.classList.remove("tournament","regeneration-day","stars-day","no-stars-day");
@@ -85,7 +78,7 @@ function applyDayColors(el,data,isTournament){
   else el.classList.add("no-stars-day");
 }
 
-/* ========= GWIAZDKI ========= */
+/* ========= GWIAZDKI + IKONKI ========= */
 function renderStarsAndIcons(key,data,el,isTournament){
   const row=document.createElement("div");
   row.className="row";
@@ -98,16 +91,49 @@ function renderStarsAndIcons(key,data,el,isTournament){
     s.className=active?"star active":"star";
     s.onclick=async()=>{
       const v=(data.stars||0)===i?0:i;
-      await saveDay(key,{stars:v});
       data.stars=v;
+      stars.querySelectorAll(".star").forEach((st,idx)=>{
+        const on=idx<v;
+        st.textContent=on?"★":"☆";
+        st.className=on?"star active":"star";
+      });
+      await saveDay(key,{stars:v});
       applyDayColors(el,data,isTournament);
       updateStarsCounter();
     };
     stars.appendChild(s);
   }
 
-  row.appendChild(stars);
+  const icons=document.createElement("div");
+  icons.textContent =
+    (data.trening?"🎯":"")+
+    (data.turniej?"🏆":"")+
+    (data.analiza?"🧠":"")+
+    (data.regeneracja?"😴":"");
+
+  row.append(stars,icons);
   el.appendChild(row);
+}
+
+/* ========= CHECKLISTA ========= */
+function renderChecklist(key,data,el){
+  const box=document.createElement("div");
+  box.className="checks";
+  [
+    ["trening","🎯 Trening"],
+    ["turniej","🏆 Turniej"],
+    ["analiza","🧠 Analiza"],
+    ["regeneracja","😴 Regeneracja"]
+  ].forEach(([f,l])=>{
+    const lab=document.createElement("label");
+    const cb=document.createElement("input");
+    cb.type="checkbox";
+    cb.checked=!!data[f];
+    cb.onchange=()=>{ data[f]=cb.checked; saveDay(key,{[f]:cb.checked}); };
+    lab.append(cb," ",l);
+    box.appendChild(lab);
+  });
+  el.appendChild(box);
 }
 
 /* ========= LICZNIKI ========= */
@@ -170,59 +196,72 @@ async function renderMonth(){
     }
 
     renderStarsAndIcons(key,data,el,!!t);
+    el.ondblclick=()=>renderDay(date);
     calendarEl.appendChild(el);
   }
 }
 
-/* ========= ZADANIA – WIDOK ========= */
-async function renderTasks(){
+/* ========= DZIEŃ ========= */
+async function renderDay(date){
   calendarEl.innerHTML="";
   calendarEl.style.gridTemplateColumns="1fr";
-  viewTitleEl.textContent="📋 Zadania";
+  viewTitleEl.textContent=date.toLocaleDateString("pl-PL",{weekday:"long",day:"numeric",month:"long"});
+
+  const key=date.toISOString().slice(0,10);
+  const data=await loadDay(key);
+  const tournaments=await loadTournaments();
+  const t=tournamentForDay(date,tournaments);
+
+  const el=document.createElement("div");
+  el.className="day";
+  applyDayColors(el,data,!!t);
+
+  el.innerHTML=`
+    <textarea rows="6" placeholder="Plan dnia">${data.text||""}</textarea>
+    <input placeholder="Link Lichess" value="${data.link||""}">
+  `;
+
+  const ta=el.querySelector("textarea");
+  const li=el.querySelector("input");
+  const save=debounce(()=>saveDay(key,{text:ta.value,link:li.value}));
+  ta.oninput=save; li.oninput=save;
+
+  renderChecklist(key,data,el);
+  renderStarsAndIcons(key,data,el,!!t);
+  calendarEl.appendChild(el);
+}
+
+/* ========= TURNIEJE ========= */
+async function renderTournaments(){
+  calendarEl.innerHTML="";
+  calendarEl.style.gridTemplateColumns="1fr";
+  viewTitleEl.textContent="🏆 Turnieje";
 
   const box=document.createElement("div");
   box.className="day";
 
-  const tasks=await loadTasks();
-  tasks.forEach(t=>{
+  const ts=await loadTournaments();
+  ts.forEach(t=>{
     const r=document.createElement("div");
-    r.style.display="flex";
-    r.style.alignItems="center";
-    r.style.gap="10px";
-
-    const star=document.createElement("span");
-    star.textContent=t.done?"★":"☆";
-    star.className="star active";
-    star.onclick=async()=>{
-      await setDoc(doc(db,"tasks",t.id),{done:!t.done},{merge:true});
-      renderTasks();
+    r.innerHTML=`<b>${t.name}</b><br>${t.start} – ${t.end} <button>❌</button>`;
+    r.querySelector("button").onclick=async()=>{
+      await deleteDoc(doc(db,"tournaments",t.id));
+      renderTournaments();
     };
-
-    const title=document.createElement("span");
-    title.textContent=t.title;
-    if(t.done) title.style.textDecoration="line-through";
-
-    const del=document.createElement("button");
-    del.textContent="❌";
-    del.onclick=async()=>{
-      await deleteDoc(doc(db,"tasks",t.id));
-      renderTasks();
-    };
-
-    r.append(star,title,del);
     box.appendChild(r);
   });
 
   const add=document.createElement("button");
-  add.textContent="➕ Dodaj zadanie";
+  add.textContent="➕ Dodaj turniej";
   add.onclick=async()=>{
-    const title=prompt("Treść zadania");
-    if(title){
-      await addDoc(collection(db,"tasks"),{title,done:false});
-      renderTasks();
+    const name=prompt("Nazwa");
+    const start=prompt("Start YYYY-MM-DD");
+    const end=prompt("Koniec YYYY-MM-DD");
+    if(name&&start&&end){
+      await addDoc(collection(db,"tournaments"),{name,start,end});
+      renderTournaments();
     }
   };
-
   box.appendChild(add);
   calendarEl.appendChild(box);
 }
@@ -231,8 +270,7 @@ async function renderTasks(){
 homeBtn.onclick=renderMonth;
 prevBtn.onclick=()=>{currentDate.setMonth(currentDate.getMonth()-1);renderMonth();};
 nextBtn.onclick=()=>{currentDate.setMonth(currentDate.getMonth()+1);renderMonth();};
-tournamentsBtn.onclick=renderMonth;
-tasksBtn.onclick=renderTasks;
+tournamentsBtn.onclick=renderTournaments;
 
 /* ========= START ========= */
 (async()=>{
@@ -244,29 +282,139 @@ tasksBtn.onclick=renderTasks;
 
 <style>
 body{margin:0;font-family:Arial;background:#f4f4f4}
-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;border-bottom:2px solid #000}
+
+/* ===== HEADER ===== */
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 16px;
+  background:#fff;
+  border-bottom:2px solid #000;
+}
+
+/* ===== MENU ===== */
 .menu{display:flex;align-items:center;gap:10px}
-.menu button{background:#fff;border:3px solid #000;border-radius:16px;font-size:18px;padding:10px 16px;font-weight:bold;cursor:pointer}
-.stats{display:grid;grid-template-columns:auto 1fr auto;padding:6px 10px;font-weight:bold}
+.menu button{
+  background:#fff;
+  border:3px solid #000;     /* ⬅️ grubsza linia */
+  border-radius:16px;       /* ⬅️ bardziej „kafelkowe” */
+  cursor:pointer;
+
+  font-size:18px;           /* ⬅️ większe ikony/tekst */
+  padding:10px 16px;        /* ⬅️ większy hit-area */
+
+  font-weight:bold;
+  transition:background .2s, transform .1s;
+}
+.menu button:hover{
+  background:#000;
+  color:#fff;
+  transform:translateY(-1px);
+}
+
+#prevMonthBtn,
+#nextMonthBtn{
+  font-size:20px;
+  padding:10px 14px;
+}
+
+/* ===== MENU LINKI ===== */
+.menu-links{
+  display:flex;align-items:center;gap:10px;
+  margin-left:14px;padding-left:14px;border-left:2px solid #ddd;
+}
+.menu-links img{
+  height:38px;              /* ⬅️ było 28px */
+  width:auto;
+  transition:transform .2s;
+}
+.menu-links img:hover{
+  transform:scale(1.2);
+}
+
+/* ===== RESZTA ===== */
+.stats{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  padding:6px 10px;
+  font-weight:bold;
+}
+.legend{display:flex;justify-content:center;gap:14px;font-size:13px}
+.legend span{display:flex;align-items:center;gap:6px}
+.box{width:14px;height:14px;border:2px solid #000}
 .calendar{display:grid;gap:8px;padding:10px}
-.weekday{text-align:center;font-weight:bold}
-.day{border:2px solid #000;border-radius:8px;padding:8px;height:190px;display:flex;flex-direction:column;gap:6px}
-textarea{width:100%;resize:none;flex-grow:1}
-.star{cursor:pointer;font-size:22px}
-.star.active{color:gold}
+.weekday{font-weight:bold;text-align:center}
+
+/* ===== KAFELKI DNI – ZMIANA ===== */
+.day{
+  border:2px solid #000;
+  border-radius:8px;
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+
+  height:190px;              /* ✅ STAŁA WYSOKOŚĆ */
+  box-sizing:border-box;
+}
+
+/* ===== TEXTAREA – ZMIANA ===== */
+.day textarea{
+  width:100%;
+  resize:none;
+  flex-grow:1;               /* ✅ dynamiczne wypełnienie */
+  min-height:40px;
+  overflow-y:auto;
+
+  scrollbar-width:thin;
+  scrollbar-color:#999 transparent;
+}
+
+/* Chrome / Edge / Safari */
+.day textarea::-webkit-scrollbar{width:6px}
+.day textarea::-webkit-scrollbar-thumb{
+  background:#aaa;border-radius:4px;
+}
+.day textarea::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+textarea,input{width:100%}
+.row{display:flex;gap:6px;align-items:center}
+.checks{display:flex;gap:10px;flex-wrap:wrap}
+.star{cursor:pointer;font-size:20px}
+.star.active{
+  color:gold;
+  text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;
+}
 .tournament{background:#ffeb3b}
 .regeneration-day{background:#66bb6a}
 .stars-day{background:#e3f2fd}
 .no-stars-day{background:#ff9999}
+
+/* ===== HEADER IMAGE ===== */
+.header-left{display:flex;align-items:center;gap:12px}
+.header-image{
+  height:200px;
+  width:auto;
+  object-fit:cover;
+  border-radius:22px;
+  border:none; 
+}
 </style>
 </head>
 
 <body>
 
 <header>
-  <div>
-    <strong>Droga do MP – Maja Matwiejczuk</strong><br>
-    <span id="viewTitle"></span>
+  <div class="header-left">
+    <img src="image2.png" alt="Droga do MP" class="header-image">
+    <div>
+      <strong>Droga do MP – Maja Matwiejczuk</strong><br>
+      <span id="viewTitle"></span>
+    </div>
   </div>
 
   <nav class="menu">
@@ -274,13 +422,25 @@ textarea{width:100%;resize:none;flex-grow:1}
     <button id="prevMonthBtn">⬅</button>
     <button id="nextMonthBtn">➡</button>
     <button id="tournamentsBtn">🏆 Turnieje</button>
-    <button id="tasksBtn">📋 Zadania</button>
+    <button title="Zadania (wkrótce)">📋 Zadania</button>
+    <button title="Raport (wkrótce)">📊 Raport</button>
+
+    <div class="menu-links">
+      <a href="https://szachybolszewo.pl/" target="_blank"><img src="logo.png"></a>
+      <a href="https://lichess.org/" target="_blank"><img src="lichess.png"></a>
+      <a href="https://www.chess.com/home" target="_blank"><img src="chess.png"></a>
+    </div>
   </nav>
 </header>
 
 <div class="stats">
   <div id="starsCounter"></div>
-  <div></div>
+  <div class="legend">
+    <span><div class="box" style="background:#ffeb3b"></div> Turniej</span>
+    <span><div class="box" style="background:#66bb6a"></div> Regeneracja</span>
+    <span><div class="box" style="background:#e3f2fd"></div> Są gwiazdki</span>
+    <span><div class="box" style="background:#ff9999"></div> Brak gwiazdek</span>
+  </div>
   <div id="countdown"></div>
 </div>
 

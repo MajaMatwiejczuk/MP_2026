@@ -428,29 +428,31 @@ header{
 .menu{display:flex;align-items:center;gap:10px}
 .menu button{
   background:#fff;
-  border:3px solid #000;     /* ⬅️ grubsza linia */
-  border-radius:16px;       /* ⬅️ bardziej „kafelkowe” */
+  border:3px solid #000;
+  border-radius:16px;
   cursor:pointer;
 
-  font-size:16px;           /* ⬅️ większe ikony/tekst */
-  padding:8px 14px;        /* ⬅️ większy hit-area */
+  font-size:18px;          /* JEDNA WARTOŚĆ */
+  padding:10px 16px;       /* JEDNA WARTOŚĆ */
+
+  min-width:56px;          /* WSZYSTKIE RÓWNE */
+  height:48px;             /* ⬅️ KLUCZ */
+  line-height:1;
+
+  display:flex;            /* ⬅️ KLUCZ */
+  align-items:center;      /* ⬅️ KLUCZ */
+  justify-content:center;  /* ⬅️ KLUCZ */
 
   font-weight:bold;
   transition:background .2s, transform .1s;
-  
-  min-width:52px;        /* ⬅️ KLUCZ */
-  text-align:center;    /* ⬅️ CENTROWANIE EMOJI */
 }
+
+
+  
 .menu button:hover{
   background:#000;
   color:#fff;
   transform:translateY(-1px);
-}
-
-#prevMonthBtn,
-#nextMonthBtn{
-  font-size:20px;
-  padding:10px 14px;
 }
 
 /* ===== MENU LINKI ===== */

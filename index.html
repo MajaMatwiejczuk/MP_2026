@@ -250,15 +250,48 @@ async function renderTournaments(){
   box.className="day";
 
   const ts=await loadTournaments();
-  ts.forEach(t=>{
-    const r=document.createElement("div");
-    r.innerHTML=`<b>${t.name}</b><br>${t.start} – ${t.end} <button>❌</button>`;
-    r.querySelector("button").onclick=async()=>{
-      await deleteDoc(doc(db,"tournaments",t.id));
-      renderTournaments();
-    };
-    box.appendChild(r);
-  });
+ts.forEach(t=>{
+  const r=document.createElement("div");
+
+  const title=document.createElement("b");
+  title.textContent=t.name;
+
+  const dates=document.createElement("div");
+  dates.textContent=`${t.start} – ${t.end}`;
+
+  const edit=document.createElement("button");
+  edit.textContent="✏️";
+  edit.title="Edytuj turniej";
+  edit.onclick=async()=>{
+    const name=prompt("Nazwa turnieju",t.name);
+    if(!name) return;
+
+    const start=prompt("Start YYYY-MM-DD",t.start);
+    if(!start) return;
+
+    const end=prompt("Koniec YYYY-MM-DD",t.end);
+    if(!end) return;
+
+    await setDoc(
+      doc(db,"tournaments",t.id),
+      { name, start, end },
+      { merge:true }
+    );
+    renderTournaments();
+  };
+
+  const del=document.createElement("button");
+  del.textContent="❌";
+  del.title="Usuń turniej";
+  del.onclick=async()=>{
+    await deleteDoc(doc(db,"tournaments",t.id));
+    renderTournaments();
+  };
+
+  r.append(title,dates,edit,del);
+  box.appendChild(r);
+});
+
 
   const add=document.createElement("button");
   add.textContent="➕ Dodaj turniej";

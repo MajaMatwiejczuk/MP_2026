@@ -401,16 +401,17 @@ body{margin:0;font-family:Arial;background:#f4f4f4}
 /* ===== GÓRNY BANNER (NISKI PASEK) ===== */
 .top-banner{
   width:100%;
-  height:100px;          /* ✅ taka sama skala jak header */
+  height:180px;          /* ✅ taka sama skala jak header */
   overflow:hidden;
 }
 
 .top-banner img{
   width:100%;
   height:100%;
-  object-fit:cover;      /* ✅ przycina zamiast rozciągać */
-  display:block;
+  object-fit:cover;
+  object-position:center top;   /* ✅ kluczowe */
 }
+
 
 
 

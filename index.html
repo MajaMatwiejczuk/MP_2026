@@ -37,6 +37,8 @@ const homeBtn = document.getElementById("homeBtn");
 const prevBtn = document.getElementById("prevMonthBtn");
 const nextBtn = document.getElementById("nextMonthBtn");
 const tournamentsBtn = document.getElementById("tournamentsBtn");
+  const tasksBtn = document.getElementById("tasksBtn");
+
 
 /* ========= DATES ========= */
 let currentDate = new Date();
@@ -68,6 +70,13 @@ function tournamentForDay(date,tournaments){
     return date>=start && date<=end;
   });
 }
+/* ========= ZADANIA ========= */
+async function loadTasks(){
+  const snap = await getDocs(collection(db,"tasks"));
+  return snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+
+  
 
 /* ========= KOLORY ========= */
 function applyDayColors(el,data,isTournament){
@@ -266,11 +275,77 @@ async function renderTournaments(){
   calendarEl.appendChild(box);
 }
 
+async function renderTasks(){
+  calendarEl.innerHTML="";
+  calendarEl.style.gridTemplateColumns="1fr";
+  viewTitleEl.textContent="📋 Zadania";
+
+  const box=document.createElement("div");
+  box.className="day";
+
+  const tasks = await loadTasks();
+
+  tasks.forEach(t=>{
+    const row=document.createElement("div");
+    row.style.display="flex";
+    row.style.alignItems="center";
+    row.style.gap="10px";
+
+    const star=document.createElement("span");
+    star.textContent = t.done ? "★" : "☆";
+    star.className="star active";
+    star.style.cursor="pointer";
+
+    star.onclick = async ()=>{
+      await setDoc(
+        doc(db,"tasks",t.id),
+        { done: !t.done },
+        { merge:true }
+      );
+      renderTasks();
+    };
+
+    const title=document.createElement("span");
+    title.textContent = t.title;
+    if(t.done) title.style.textDecoration="line-through";
+
+    const del=document.createElement("button");
+    del.textContent="❌";
+    del.onclick=async()=>{
+      await deleteDoc(doc(db,"tasks",t.id));
+      renderTasks();
+    };
+
+    row.append(star,title,del);
+    box.appendChild(row);
+  });
+
+  const add=document.createElement("button");
+  add.textContent="➕ Dodaj zadanie";
+  add.onclick=async()=>{
+    const title = prompt("Treść zadania");
+    if(title){
+      await addDoc(collection(db,"tasks"),{
+        title,
+        done:false
+      });
+      renderTasks();
+    }
+  };
+
+  box.appendChild(add);
+  calendarEl.appendChild(box);
+}
+
+  
+
 /* ========= NAV ========= */
 homeBtn.onclick=renderMonth;
 prevBtn.onclick=()=>{currentDate.setMonth(currentDate.getMonth()-1);renderMonth();};
 nextBtn.onclick=()=>{currentDate.setMonth(currentDate.getMonth()+1);renderMonth();};
 tournamentsBtn.onclick=renderTournaments;
+  tasksBtn.onclick = renderTasks;
+
 
 /* ========= START ========= */
 (async()=>{
@@ -425,7 +500,7 @@ textarea,input{width:100%}
     <button id="prevMonthBtn">⬅</button>
     <button id="nextMonthBtn">➡</button>
     <button id="tournamentsBtn">🏆 Turnieje</button>
-    <button title="Zadania (wkrótce)">📋 Zadania</button>
+    <button id="tasksBtn">📋 Zadania</button>
     <button title="Raport (wkrótce)">📊 Raport</button>
 
     <div class="menu-links">

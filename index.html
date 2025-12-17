@@ -398,15 +398,30 @@ tournamentsBtn.onclick=renderTournaments;
 <style>
 body{margin:0;font-family:Arial;background:#f4f4f4}
 
-/* ===== HEADER ===== */
+/* ===== GÓRNY BANNER ===== */
+.top-banner{
+  width:100%;
+  overflow:hidden;
+}
+
+.top-banner img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+
+  
 header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:12px 16px;
+
+  padding:6px 14px;          /* ⬅️ MNIEJ WYSOKOŚCI */
   background:#fff;
   border-bottom:2px solid #000;
 }
+
 
 /* ===== MENU ===== */
 .menu{display:flex;align-items:center;gap:10px}
@@ -416,8 +431,8 @@ header{
   border-radius:16px;       /* ⬅️ bardziej „kafelkowe” */
   cursor:pointer;
 
-  font-size:18px;           /* ⬅️ większe ikony/tekst */
-  padding:10px 16px;        /* ⬅️ większy hit-area */
+  font-size:16px;           /* ⬅️ większe ikony/tekst */
+  padding:8px 14px;        /* ⬅️ większy hit-area */
 
   font-weight:bold;
   transition:background .2s, transform .1s;
@@ -512,12 +527,13 @@ textarea,input{width:100%}
 /* ===== HEADER IMAGE ===== */
 .header-left{display:flex;align-items:center;gap:12px}
 .header-image{
-  height:200px;
+  height:100px;              /* ✅ DOCELOWE ~100px */
   width:auto;
   object-fit:cover;
-  border-radius:22px;
-  border:none; 
+  border-radius:16px;
+  border:none;
 }
+
 
   /* ===== WSPÓLNE KAFELKI (TURNIEJE + ZADANIA) ===== */
 
@@ -578,6 +594,12 @@ textarea,input{width:100%}
 
 <body>
 
+<div class="top-banner">
+  <img src="images2.png" alt="Droga do MP – banner">
+</div>
+
+
+  
 <header>
   <div class="header-left">
     <img src="majaJG.png" alt="Droga do MP" class="header-image">

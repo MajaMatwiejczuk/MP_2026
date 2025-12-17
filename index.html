@@ -399,11 +399,19 @@ tournamentsBtn.onclick=renderTournaments;
 body{margin:0;font-family:Arial;background:#f4f4f4}
   
 .top-banner {
-  height: 200px;                 /* ⬅️ +50% względem headera */
-  width: 100%;
+  width: 100vw;                 /* ⬅️ KLUCZ */
+  height: 220px;                /* możesz zmienić */
+  margin: 0;
+  padding: 0;
+
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;           /* ⬅️ usuwa ograniczenia rodzica */
+  margin-right: -50vw;
 
   background-image: url("images2.png");
-  background-size: cover;        /* ⬅️ ROZSZERZA */
+  background-size: cover;       /* wypełnia boki */
   background-position: center;
   background-repeat: no-repeat;
 
@@ -415,8 +423,9 @@ body{margin:0;font-family:Arial;background:#f4f4f4}
 .top-banner img {
   height: 100%;
   width: auto;
-  object-fit: contain;           /* ⬅️ NIGDY NIE UCIĘTY */
+  object-fit: contain;          /* NIGDY NIE UCIĘTY */
 }
+
 
 
 

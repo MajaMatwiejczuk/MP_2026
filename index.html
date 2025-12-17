@@ -398,27 +398,7 @@ tournamentsBtn.onclick=renderTournaments;
 <style>
 body{margin:0;font-family:Arial;background:#f4f4f4}
   
-.top-banner {
-  width: 100vw;                 /* ⬅️ KLUCZ */
-  height: 220px;                /* możesz zmienić */
-  margin: 0;
-  padding: 0;
-
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;           /* ⬅️ usuwa ograniczenia rodzica */
-  margin-right: -50vw;
-
-  background-image: url("images2.png");
-  background-size: cover;       /* wypełnia boki */
-  background-position: center;
-  background-repeat: no-repeat;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+top-banner
 
 .top-banner img {
   height: 100%;
@@ -615,12 +595,8 @@ textarea,input{width:100%}
 
 <body>
 
-<div class="top-banner">
-  <img src="maja1.png" alt="Droga do MP – banner">
-</div>
+<img src="images2.png" alt="Droga do MP – banner" class="top-banner">
 
-
-  
 <header>
   <div class="header-left">
     <img src="majaJG.png" alt="Droga do MP" class="header-image">

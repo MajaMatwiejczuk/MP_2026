@@ -246,50 +246,30 @@ async function renderTournaments(){
   calendarEl.style.gridTemplateColumns="1fr";
   viewTitleEl.textContent="🏆 Turnieje";
 
-  const box=document.createElement("div");
-  box.className="day";
+const box=document.createElement("div");
+box.className="cards-grid";
+
 
   const ts=await loadTournaments();
 ts.forEach(t=>{
   const r=document.createElement("div");
+r.className="card";
 
-  const title=document.createElement("b");
-  title.textContent=t.name;
+const title=document.createElement("div");
+title.className="card-title";
+title.textContent=t.name;
 
-  const dates=document.createElement("div");
-  dates.textContent=`${t.start} – ${t.end}`;
+const dates=document.createElement("div");
+dates.className="card-subtitle";
+dates.textContent=`${t.start} – ${t.end}`;
 
-  const edit=document.createElement("button");
-  edit.textContent="✏️";
-  edit.title="Edytuj turniej";
-  edit.onclick=async()=>{
-    const name=prompt("Nazwa turnieju",t.name);
-    if(!name) return;
+const actions=document.createElement("div");
+actions.className="card-actions";
 
-    const start=prompt("Start YYYY-MM-DD",t.start);
-    if(!start) return;
+actions.append(edit,del);
+r.append(title,dates,actions);
+box.appendChild(r);
 
-    const end=prompt("Koniec YYYY-MM-DD",t.end);
-    if(!end) return;
-
-    await setDoc(
-      doc(db,"tournaments",t.id),
-      { name, start, end },
-      { merge:true }
-    );
-    renderTournaments();
-  };
-
-  const del=document.createElement("button");
-  del.textContent="❌";
-  del.title="Usuń turniej";
-  del.onclick=async()=>{
-    await deleteDoc(doc(db,"tournaments",t.id));
-    renderTournaments();
-  };
-
-  r.append(title,dates,edit,del);
-  box.appendChild(r);
 });
 
 
@@ -313,46 +293,48 @@ async function renderTasks(){
   calendarEl.style.gridTemplateColumns="1fr";
   viewTitleEl.textContent="📋 Zadania";
 
-  const box=document.createElement("div");
-  box.className="day";
+const box=document.createElement("div");
+box.className="cards-grid";
+
 
   const tasks = await loadTasks();
 
   tasks.forEach(t=>{
-    const row=document.createElement("div");
-    row.style.display="flex";
-    row.style.alignItems="center";
-    row.style.gap="10px";
+  const r=document.createElement("div");
+  r.className="card";
 
-    const star=document.createElement("span");
-    star.textContent = t.done ? "★" : "☆";
-    star.className="star active";
-    star.style.cursor="pointer";
+  const title=document.createElement("div");
+  title.className="card-title";
+  title.textContent=t.title;
+  if(t.done) title.style.textDecoration="line-through";
 
-    star.onclick = async ()=>{
-      await setDoc(
-        doc(db,"tasks",t.id),
-        { done: !t.done },
-        { merge:true }
-      );
-      renderTasks();
-    };
+  const actions=document.createElement("div");
+  actions.className="card-actions";
 
-    const title=document.createElement("span");
-    title.textContent = t.title;
-    if(t.done) title.style.textDecoration="line-through";
+  const star=document.createElement("button");
+  star.textContent=t.done?"★":"☆";
+  star.onclick=async()=>{
+    await setDoc(
+      doc(db,"tasks",t.id),
+      { done: !t.done },
+      { merge:true }
+    );
+    renderTasks();
+  };
 
-    const del=document.createElement("button");
-    del.textContent="❌";
-    del.onclick=async()=>{
-      await deleteDoc(doc(db,"tasks",t.id));
-      renderTasks();
-    };
+  const del=document.createElement("button");
+  del.textContent="❌";
+  del.onclick=async()=>{
+    await deleteDoc(doc(db,"tasks",t.id));
+    renderTasks();
+  };
 
-    row.append(star,title,del);
-    box.appendChild(row);
-  });
+  actions.append(star,del);
+  r.append(title,actions);
+  box.appendChild(r);
+});
 
+  
   const add=document.createElement("button");
   add.textContent="➕ Dodaj zadanie";
   add.onclick=async()=>{
@@ -511,6 +493,61 @@ textarea,input{width:100%}
   border-radius:22px;
   border:none; 
 }
+
+  /* ===== WSPÓLNE KAFELKI (TURNIEJE + ZADANIA) ===== */
+
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+  gap:14px;
+}
+
+.card{
+  border:2px solid #000;
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+
+  box-shadow:2px 2px 0 #000;
+}
+
+.card-title{
+  font-weight:bold;
+  font-size:16px;
+}
+
+.card-subtitle{
+  font-size:14px;
+  opacity:.85;
+}
+
+.card-actions{
+  margin-top:auto;
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+}
+
+.card-actions button{
+  border:2px solid #000;
+  background:#fff;
+  border-radius:8px;
+  cursor:pointer;
+  padding:4px 8px;
+  font-size:14px;
+}
+
+.card-actions button:hover{
+  background:#000;
+  color:#fff;
+}
+
+
+  
 </style>
 </head>
 

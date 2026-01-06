@@ -418,6 +418,14 @@ tournamentsBtn.onclick=renderTournaments;
 </script>
 
 <style>
+*,
+*::before,
+*::after{
+  box-sizing:border-box;
+}
+
+
+  
 body{margin:0;font-family:Arial;background:#f4f4f4}
   
 top-banner
@@ -518,6 +526,17 @@ header{
 /* ===== STAŁA WYSOKOŚĆ TYLKO W WIDOKU MIESIĄCA ===== */
 .calendar:not(.day-view) .day{
   height:190px;
+}
+/* ===== WIDOK DNIA – PEŁNA KONTROLA UKŁADU ===== */
+.calendar.day-view .day{
+  height:auto;                 /* brak limitu */
+  min-height:420px;            /* ⬅️ WIĘKSZE POLE */
+  padding:14px;
+  gap:12px;
+}
+/* ===== WIDOK DNIA – DUŻA NOTATKA ===== */
+.calendar.day-view .day textarea{
+  min-height:240px;   /* ⬅️ TU JEST REALNA ZMIANA */
 }
 
 

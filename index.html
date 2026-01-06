@@ -227,6 +227,7 @@ async function renderDay(date){
 
 el.innerHTML=`
   <textarea
+  class="day-note"
     rows="8"
     placeholder="Notatka z dnia (plan, wnioski, analiza...)"
   >${data.text||""}</textarea>
@@ -529,6 +530,16 @@ header{
   scrollbar-width:thin;
   scrollbar-color:#999 transparent;
 }
+/* ===== DUŻA NOTATKA – TYLKO WIDOK DNIA ===== */
+.day-note{
+  min-height:260px;      /* ⬅️ TU JEST REALNA ZMIANA */
+  resize:vertical;
+  font-size:14px;
+  line-height:1.4;
+  padding:8px;
+}
+
+  
 /* ===== CSS (USUWAMY PUSTE POLE) ===== */
   .links-grid{
   display:grid;

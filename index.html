@@ -510,10 +510,13 @@ header{
   display:flex;
   flex-direction:column;
   gap:6px;
-
-  height:190px;              /* ✅ STAŁA WYSOKOŚĆ */
   box-sizing:border-box;
 }
+  /* ===== STAŁA WYSOKOŚĆ TYLKO W WIDOKU MIESIĄCA ===== */
+.calendar .day{
+  height:190px;
+}
+
 
 /* ===== TEXTAREA – ZMIANA ===== */
 .day textarea{

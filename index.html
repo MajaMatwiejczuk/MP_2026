@@ -225,15 +225,34 @@ async function renderDay(date){
   el.className="day";
   applyDayColors(el,data,!!t);
 
-  el.innerHTML=`
-    <textarea rows="6" placeholder="Plan dnia">${data.text||""}</textarea>
-    <input placeholder="Link Lichess" value="${data.link||""}">
-  `;
+el.innerHTML=`
+  <textarea
+    rows="8"
+    placeholder="Notatka z dnia (plan, wnioski, analiza...)"
+  >${data.text||""}</textarea>
 
-  const ta=el.querySelector("textarea");
-  const li=el.querySelector("input");
-  const save=debounce(()=>saveDay(key,{text:ta.value,link:li.value}));
-  ta.oninput=save; li.oninput=save;
+  <div class="links-grid">
+    <input placeholder="Link 1 (np. Lichess)" value="${data.link1||""}">
+    <input placeholder="Link 2" value="${data.link2||""}">
+    <input placeholder="Link 3" value="${data.link3||""}">
+  </div>
+`;
+
+ const ta = el.querySelector("textarea");
+const inputs = el.querySelectorAll(".links-grid input");
+
+const save = debounce(()=>{
+  saveDay(key,{
+    text: ta.value,
+    link1: inputs[0].value,
+    link2: inputs[1].value,
+    link3: inputs[2].value
+  });
+});
+
+ta.oninput = save;
+inputs.forEach(i=>i.oninput = save);
+
 
   renderChecklist(key,data,el);
   renderStarsAndIcons(key,data,el,!!t);
@@ -507,6 +526,20 @@ header{
   scrollbar-width:thin;
   scrollbar-color:#999 transparent;
 }
+/* ===== CSS (USUWAMY PUSTE POLE) ===== */
+  .links-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+}
+
+.links-grid input{
+  padding:6px;
+  border:2px solid #000;
+  border-radius:6px;
+  font-size:13px;
+}
+
 
 /* Chrome / Edge / Safari */
 .day textarea::-webkit-scrollbar{width:6px}

@@ -113,12 +113,20 @@ function renderStarsAndIcons(key,data,el,isTournament){
     stars.appendChild(s);
   }
 
-  const icons=document.createElement("div");
-  icons.textContent =
-    (data.trening?"🎯":"")+
-    (data.turniej?"🏆":"")+
-    (data.analiza?"🧠":"")+
-    (data.regeneracja?"😴":"");
+ const hasLinks =
+  (data.link1 && data.link1.trim() !== "") ||
+  (data.link2 && data.link2.trim() !== "") ||
+  (data.link3 && data.link3.trim() !== "");
+
+const icons = document.createElement("div");
+icons.innerHTML =
+  (data.trening ? "<span title='Trening'>🎯</span>" : "") +
+  (data.turniej ? "<span title='Turniej'>🏆</span>" : "") +
+  (data.analiza ? "<span title='Analiza'>🧠</span>" : "") +
+  (data.regeneracja ? "<span title='Regeneracja'>😴</span>" : "") +
+  (hasLinks ? "<span title='Są linki'>🔗</span>" : "");
+
+
 
   row.append(stars,icons);
   el.appendChild(row);

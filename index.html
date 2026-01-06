@@ -113,10 +113,8 @@ function renderStarsAndIcons(key,data,el,isTournament){
     stars.appendChild(s);
   }
 
- const hasLinks =
-  (data.link1 && data.link1.trim() !== "") ||
-  (data.link2 && data.link2.trim() !== "") ||
-  (data.link3 && data.link3.trim() !== "");
+const hasLinks = Array.isArray(data.links) && data.links.length > 0;
+
 
 const icons = document.createElement("div");
 icons.innerHTML =

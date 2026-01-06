@@ -164,6 +164,7 @@ function updateCountdown(){
 
 /* ========= MIESIĄC ========= */
 async function renderMonth(){
+  calendarEl.classList.remove("day-view");
   calendarEl.innerHTML="";
   calendarEl.style.gridTemplateColumns="repeat(7,1fr)";
   viewTitleEl.textContent=currentDate.toLocaleDateString("pl-PL",{month:"long",year:"numeric"});
@@ -214,6 +215,7 @@ async function renderMonth(){
 async function renderDay(date){
   calendarEl.innerHTML="";
   calendarEl.style.gridTemplateColumns="1fr";
+  calendarEl.classList.add("day-view");
   viewTitleEl.textContent=date.toLocaleDateString("pl-PL",{weekday:"long",day:"numeric",month:"long"});
 
   const key=date.toISOString().slice(0,10);
@@ -513,10 +515,11 @@ header{
   gap:6px;
   box-sizing:border-box;
 }
-  /* ===== STAŁA WYSOKOŚĆ TYLKO W WIDOKU MIESIĄCA ===== */
-.calendar .day{
+/* ===== STAŁA WYSOKOŚĆ TYLKO W WIDOKU MIESIĄCA ===== */
+.calendar:not(.day-view) .day{
   height:190px;
 }
+
 
 
 /* ===== TEXTAREA – ZMIANA ===== */
